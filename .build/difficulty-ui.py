@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('app/src/main/java/com/example/survivor/game/Difficulty.java');s=p.read_text(encoding='utf-8').replace('голод и сонливость от действий −50%', 'голод и сонливость накапливаются примерно вдвое медленнее');p.write_text(s,encoding='utf-8')
+p=Path('app/src/main/java/com/example/survivor/game/GameSession.java');s=p.read_text(encoding='utf-8').replace('public final String time;', 'public final String time;\n        public final String difficulty;').replace('            this.time = time;', '            this.difficulty=player==null?"":Difficulty.name(player.difficulty());\n            this.time = time;');p.write_text(s,encoding='utf-8')
+p=Path('app/src/main/java/com/example/survivor/MainActivity.java');s=p.read_text(encoding='utf-8').replace('current.time + " · " + getString(current.night', 'current.time + " · " + current.difficulty + " · " + getString(current.night');p.write_text(s,encoding='utf-8')

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="battle_units">
+        <item>@drawable/human_john</item>
+        <item>@drawable/human_wanderer</item>
+        <item>@drawable/human_raider</item>
+        <item>@drawable/zombie_normal</item>
+        <item>@drawable/zombie_runner</item>
+        <item>@drawable/zombie_jumper</item>
+        <item>@drawable/zombie_screamer</item>
+        <item>@drawable/zombie_brute</item>
+    </array>
+    <array name="battle_obstacles">
+        <item>@drawable/field_crate</item>
+        <item>@drawable/field_barrel</item>
+        <item>@drawable/field_rock</item>
+        <item>@drawable/field_tree</item>
+        <item>@drawable/field_concrete_wall</item>
+        <item>@drawable/field_sandbags</item>
+        <item>@drawable/field_roadblock</item>
+        <item>@drawable/field_fence</item>
+        <item>@drawable/field_gate</item>
+        <item>@drawable/field_pallets</item>
+        <item>@drawable/field_crates</item>
+        <item>@drawable/field_pipe</item>
+        <item>@drawable/field_car</item>
+        <item>@drawable/field_bus</item>
+        <item>@drawable/field_rubble</item>
+        <item>@drawable/field_brick_wall</item>
+        <item>@drawable/field_hedgehog</item>
+        <item>@drawable/field_concrete_block</item>
+        <item>@drawable/battle_obstacle_fallen_tree</item>
+        <item>@drawable/battle_obstacle_stump</item>
+        <item>@drawable/field_trash</item>
+        <item>@drawable/field_barricade</item>
+        <item>@drawable/field_bush</item>
+        <item>@drawable/field_cable_spool</item>
+        <item>@drawable/furniture_chair</item>
+        <item>@drawable/furniture_table</item>
+        <item>@drawable/furniture_bed</item>
+        <item>@drawable/furniture_sofa</item>
+        <item>@drawable/furniture_wardrobe</item>
+        <item>@drawable/furniture_bookcase</item>
+        <item>@drawable/furniture_stove</item>
+        <item>@drawable/furniture_fridge</item>
+        <item>@drawable/furniture_sink</item>
+        <item>@drawable/furniture_toilet</item>
+        <item>@drawable/furniture_armchair</item>
+        <item>@drawable/room_crate</item>
+        <item>@drawable/room_barrel</item>
+        <item>@drawable/room_locker</item>
+        <item>@drawable/room_workbench</item>
+        <item>@drawable/room_shelf</item>
+        <item>@drawable/room_wall</item>
+    </array>
+</resources>

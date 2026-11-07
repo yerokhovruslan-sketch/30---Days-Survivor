@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/intro_screen" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#000000" android:clickable="true" android:focusable="true">
+    <FrameLayout android:id="@+id/intro_picture" android:layout_width="match_parent"
+        android:layout_height="match_parent" android:alpha="0">
+        <ImageView android:layout_width="match_parent" android:layout_height="match_parent"
+            android:src="@drawable/intro_shelter" android:scaleType="centerCrop"
+            android:contentDescription="@string/intro_picture_description" />
+        <View android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="@drawable/intro_shade" />
+    </FrameLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:gravity="bottom" android:padding="24dp">
+        <ScrollView android:id="@+id/intro_text_scroll" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true"
+            android:scrollbars="none">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="bottom">
+                <TextView android:id="@+id/intro_message" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:visibility="invisible"
+                    android:textColor="#F0F0F0" android:textSize="17sp" android:lineSpacingExtra="3dp"
+                    android:fontFamily="monospace" android:shadowColor="#000000"
+                    android:shadowRadius="3" android:shadowDy="1" />
+            </LinearLayout>
+        </ScrollView>
+        <Button android:id="@+id/intro_continue" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="20dp"
+            android:visibility="invisible" android:enabled="false" android:minHeight="52dp"
+            android:text="@string/intro_continue" android:textAllCaps="false"
+            android:textColor="#FFFFFF" android:backgroundTint="#252525" />
+    </LinearLayout>
+</FrameLayout>

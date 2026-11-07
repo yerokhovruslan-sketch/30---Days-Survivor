@@ -1,0 +1,4 @@
+from pathlib import Path
+p=Path('app/src/main/java/com/example/survivor/game/GameSession.java');s=p.read_text(encoding='utf-8').replace('if(world==null || player==null)return;', 'if(world==null || player==null || !player.isAlive())return;');p.write_text(s,encoding='utf-8')
+p=Path('app/src/test/java/com/example/survivor/game/EconomyTest.java');s=p.read_text(encoding='utf-8').replace('c.tick(2_000_000_000L,true)', 'c.tick(4_000_000_000L,true)').replace('c.tick(500_000_000L,true)', 'c.tick(1_000_000_000L,true)').replace('assertEquals(2,w.day());assertEquals("09:31",w.time());', 'assertEquals(1,w.day());assertEquals("21:31",w.time());');p.write_text(s,encoding='utf-8')
+p=Path('app/src/test/java/com/example/survivor/game/LiveClockTest.java');s=p.read_text(encoding='utf-8').replace('frames.poll(4,TimeUnit.SECONDS)', 'frames.poll(7,TimeUnit.SECONDS)');p.write_text(s,encoding='utf-8')

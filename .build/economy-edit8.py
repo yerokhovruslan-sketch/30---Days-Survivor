@@ -1,0 +1,7 @@
+from pathlib import Path
+p=Path('app/src/main/res/layout/game_panel.xml');s=p.read_text(encoding='utf-8').replace('    <TextView android:id="@+id/section_title"', '''    <TextView android:id="@+id/panel_world_clock" android:layout_width="match_parent" android:layout_height="48dp"
+        android:gravity="center_vertical" android:textColor="#BDBDBD" android:textSize="13sp"
+        android:clickable="true" android:focusable="true" android:background="?android:attr/selectableItemBackground"/>
+    <TextView android:id="@+id/section_title"''');p.write_text(s,encoding='utf-8')
+p=Path('app/src/main/java/com/example/survivor/MainActivity.java');s=p.read_text(encoding='utf-8').replace('        findViewById(R.id.radio_continue).setSoundEffectsEnabled(false);','        findViewById(R.id.panel_world_clock).setOnClickListener(v->findViewById(R.id.character_day).performClick());\n        findViewById(R.id.radio_continue).setSoundEffectsEnabled(false);');needle='        ((TextView) findViewById(R.id.character_balance)).setText';s=s.replace(needle,'        ((TextView)findViewById(R.id.panel_world_clock)).setText("День "+current.day+" · "+current.time+" · ×24 · Пауза");\n'+needle);p.write_text(s,encoding='utf-8')
+p=Path('app/src/main/java/com/example/survivor/game/Shop.java');s=p.read_text(encoding='utf-8').replace('            showCatalogue();\n            int number', '            showCatalogue();GameIO.checkpoint();\n            int number');p.write_text(s,encoding='utf-8')

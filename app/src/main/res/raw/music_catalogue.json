@@ -1,0 +1,170 @@
+{
+  "anthem": {
+    "durationMs": 113880,
+    "startMs": 0,
+    "endMs": 111164,
+    "gain": 0.5957,
+    "meanDb": -17.5,
+    "peakDb": -0.9
+  },
+  "ash": {
+    "durationMs": 129960,
+    "startMs": 0,
+    "endMs": 128478,
+    "gain": 0.6683,
+    "meanDb": -18.5,
+    "peakDb": -0.8
+  },
+  "ashfall": {
+    "durationMs": 139760,
+    "startMs": 0,
+    "endMs": 137377,
+    "gain": 0.6383,
+    "meanDb": -18.1,
+    "peakDb": -2.3
+  },
+  "bunker": {
+    "durationMs": 161360,
+    "startMs": 0,
+    "endMs": 159078,
+    "gain": 0.5888,
+    "meanDb": -17.4,
+    "peakDb": -2.6
+  },
+  "concrete": {
+    "durationMs": 240000,
+    "startMs": 0,
+    "endMs": 240000,
+    "gain": 0.4677,
+    "meanDb": -15.4,
+    "peakDb": -3.9
+  },
+  "countdown": {
+    "durationMs": 103320,
+    "startMs": 0,
+    "endMs": 98857,
+    "gain": 0.5248,
+    "meanDb": -16.4,
+    "peakDb": -2.9
+  },
+  "decay": {
+    "durationMs": 116960,
+    "startMs": 0,
+    "endMs": 115368,
+    "gain": 0.4842,
+    "meanDb": -15.7,
+    "peakDb": -2.3
+  },
+  "digital": {
+    "durationMs": 101960,
+    "startMs": 0,
+    "endMs": 101960,
+    "gain": 0.5129,
+    "meanDb": -16.2,
+    "peakDb": -2.2
+  },
+  "dreams": {
+    "durationMs": 240000,
+    "startMs": 0,
+    "endMs": 240000,
+    "gain": 0.4898,
+    "meanDb": -15.8,
+    "peakDb": -1.9
+  },
+  "echoes": {
+    "durationMs": 186480,
+    "startMs": 0,
+    "endMs": 182529,
+    "gain": 0.4842,
+    "meanDb": -15.7,
+    "peakDb": -4.6
+  },
+  "elegy": {
+    "durationMs": 157480,
+    "startMs": 0,
+    "endMs": 156661,
+    "gain": 0.6683,
+    "meanDb": -18.5,
+    "peakDb": -1.6
+  },
+  "fading": {
+    "durationMs": 138840,
+    "startMs": 0,
+    "endMs": 137491,
+    "gain": 0.6998,
+    "meanDb": -18.9,
+    "peakDb": -0.8
+  },
+  "forgotten": {
+    "durationMs": 90120,
+    "startMs": 0,
+    "endMs": 88953,
+    "gain": 0.537,
+    "meanDb": -16.6,
+    "peakDb": -2.2
+  },
+  "frenzy": {
+    "durationMs": 124596,
+    "startMs": 0,
+    "endMs": 122334,
+    "gain": 0.631,
+    "meanDb": -18.0,
+    "peakDb": -4.2
+  },
+  "fury": {
+    "durationMs": 240000,
+    "startMs": 0,
+    "endMs": 240000,
+    "gain": 0.4677,
+    "meanDb": -15.4,
+    "peakDb": -1.8
+  },
+  "graveyard": {
+    "durationMs": 94720,
+    "startMs": 0,
+    "endMs": 92004,
+    "gain": 0.6237,
+    "meanDb": -17.9,
+    "peakDb": -0.9
+  },
+  "hunted": {
+    "durationMs": 117144,
+    "startMs": 0,
+    "endMs": 117144,
+    "gain": 0.5754,
+    "meanDb": -17.2,
+    "peakDb": -5.5
+  },
+  "light": {
+    "durationMs": 174996,
+    "startMs": 0,
+    "endMs": 172149,
+    "gain": 0.4217,
+    "meanDb": -14.5,
+    "peakDb": -1.5
+  },
+  "wanderer": {
+    "durationMs": 275760,
+    "startMs": 1871,
+    "endMs": 274032,
+    "gain": 0.5188,
+    "meanDb": -16.3,
+    "peakDb": -0.9
+  },
+  "houslast": {
+    "durationMs": 137664,
+    "startMs": 0,
+    "endMs": 135610,
+    "gain": 1,
+    "meanDb": -27.0,
+    "peakDb": -7.8
+  },
+  "tense": {
+    "durationMs": 105336,
+    "startMs": 522,
+    "endMs": 105336,
+    "gain": 1,
+    "meanDb": -24.7,
+    "peakDb": -4.9
+  }
+}

@@ -1,0 +1,6 @@
+from pathlib import Path
+b=Path('app/src/main/java/com/example/survivor/game')
+p=b/'WorldStories.java';s=p.read_text(encoding='utf-8').replace('        GameIO.narrative();\n        if (discovery == null) return;', '        if (discovery == null) return;\n        GameIO.narrative();');p.write_text(s,encoding='utf-8')
+p=b/'Shop.java';s=p.read_text(encoding='utf-8').replace('items.get(i).getSalePrice() + " $ · "', 'Economy.salePrice(clock(),items.get(i)) + " $ · "');p.write_text(s,encoding='utf-8')
+p=b/'GameSession.java';s=p.read_text(encoding='utf-8').replace('    private long realtimeRemainder;', '    private final ActiveClock activeClock=new ActiveClock();').replace('        realtimeRemainder+=Math.max(0,elapsed);\n        int minutes=(int)(realtimeRemainder/2500000000L);realtimeRemainder%=2500000000L;', '        int minutes=activeClock.tick(elapsed,true);').replace('publish(atMain?Mode.MAIN:Mode.CHOICE);if(clock().minuteOfDay()%5==0)', 'publish(atMain?Mode.MAIN:Mode.CHOICE,false);if(clock().minuteOfDay()%5==0)')
+s=s.replace('    private void publish(Mode mode) {\n', '    private void publish(Mode mode) {publish(mode,true);}\n    private void publish(Mode mode,boolean newRevision) {\n').replace('Frame frame = new Frame(++revision, mode,', 'if(newRevision)revision++;\n        Frame frame = new Frame(revision, mode,');p.write_text(s,encoding='utf-8')

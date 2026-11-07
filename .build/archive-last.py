@@ -1,0 +1,7 @@
+from pathlib import Path
+b=Path('app/src/main/java/com/example/survivor/game')
+p=b/'PoliceArchive.java';s=p.read_text(encoding='utf-8').replace('return p.getUpgrades().signalReceived &&', 'return p.getUpgrades().radio>0 && p.getUpgrades().signalReceived &&');p.write_text(s,encoding='utf-8')
+p=b/'WorldStories.java';s=p.read_text(encoding='utf-8').replace('    boolean searchedPlace(int place)', '    void markSearched(int place){searched.add(place);}\n    boolean searchedPlace(int place)');p.write_text(s,encoding='utf-8')
+p=b/'Survivor.java';s=p.read_text(encoding='utf-8').replace('        world.getStories().findArchiveKey(player,world.getNumber(location));', '        world.getStories().markSearched(world.getNumber(location));\n        world.getStories().findArchiveKey(player,world.getNumber(location));');p.write_text(s,encoding='utf-8')
+p=b/'TacticalBattle.java';s=p.read_text(encoding='utf-8').replace('GameIO.menu(won()?"Поле очищено":"Тактический бой · ход "+turn,', 'GameIO.menu(fixedEncounter?"Архив · ход "+turn:won()?"Поле очищено":"Тактический бой · ход "+turn,');p.write_text(s,encoding='utf-8')
+p=Path('app/src/test/java/com/example/survivor/game/PoliceArchiveTest.java');s=p.read_text(encoding='utf-8').replace('p.getUpgrades().radio=1;p.getUpgrades().signalReceived', 'p.getUpgrades().radio=1;p.getUpgrades().signalAttempts=2;p.getUpgrades().signalReceived');p.write_text(s,encoding='utf-8')

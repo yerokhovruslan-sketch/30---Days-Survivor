@@ -1,0 +1,14 @@
+JUnit version 4.13.2
+...E...........������ ���� �� ������. ���� ������� ��� � ������: �������, �� ��� ����������.
+.
+Time: 0,327
+There was 1 failure:
+1) leavingHomeChangesTrackAndStoryCuePlaysOnce(com.example.survivor.MusicPlanTest)
+org.junit.ComparisonFailure: expected:<[bunker]> but was:<[dreams]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.example.survivor.MusicPlanTest.leavingHomeChangesTrackAndStoryCuePlaysOnce(MusicPlanTest.java:25)
+
+FAILURES!!!
+Tests run: 15,  Failures: 1
+
