@@ -14,3 +14,10 @@
 .cxx
 local.properties
 .build/
+
+# Local IDE settings and generated files
+.idea/
+.gradle/
+/build/
+app/build/
+local.properties

@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 /** Colors speaker labels without changing the color or contents of their words. */
 final class DialogueColors {
- private static final Pattern SPEAKER=Pattern.compile("(?m)^\\s*(Джон|Сем[её]н|Андрей|Марина|Арт[её]м|Кирилл|Виктор(?: Павлович)?|Ольга|Заведующий|Рейдер|Выживший|Незнакомец|Голос)\\s*:",Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+ private static final Pattern SPEAKER=Pattern.compile("(?m)^\\s*(Джон|Сем[её]н|Андрей|Марина|Арт[её]м|Кирилл|Виктор(?: Павлович)?|Ольга|Оля|Неизвестная|Заведующий|Рейдер|Выживший|Незнакомец|Голос)\\s*:",Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
  private static final int[] NPC={0xff80d6cb,0xffffa589,0xff9dc5ff,0xffa7da8d,0xfff2adcf,0xffffc995};
  static CharSequence decorate(CharSequence text){
   if(text==null)return "";

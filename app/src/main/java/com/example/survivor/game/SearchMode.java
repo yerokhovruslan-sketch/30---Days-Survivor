@@ -41,7 +41,7 @@ enum SearchMode {
             if(location!=null && !clock.residential().points(clock.currentPlace(),clock).isEmpty())
                 GameIO.action(6,"Точки интереса","Известные встречи и помещения");
             if(clock.currentPlace()==15 && PoliceArchive.unlocked(player))GameIO.action(8,"Попасть в архив","Ключ в рюкзаке · два связанных зала");
-            if(clock.archiveComplete && (clock.currentPlace()==13 || clock.currentPlace()==41))GameIO.action(9,clock.currentPlace()==13?"Проверить медицинский экипаж №17":"Разведать резервный маршрут","Сюжетное исследование");
+            if(clock.archiveComplete && clock.currentPlace()==41)GameIO.action(9,"Разведать резервный маршрут","Сюжетное исследование");
             if(clock.currentPlace()==5 && clock.courtyard().passageAvailable()) GameIO.action(11,"Осмотреть служебный проход","Отмечен на плане дворника");
             GameIO.action(0, "Вернуться домой");
             int choice = SurvivalSystems.choice(scanner);
@@ -51,7 +51,7 @@ enum SearchMode {
                 if (location == null || !location.isNightOnly() || LocationPreview.untilDawn(clock) > selected.minutes) return selected;
             }
             if(choice==8 && clock.currentPlace()==15 && PoliceArchive.unlocked(player)){PoliceArchive.enter(player,clock,scanner,java.util.concurrent.ThreadLocalRandom.current());if(!player.isAlive())return null;}
-            if(choice==9 && clock.archiveComplete && (clock.currentPlace()==13 || clock.currentPlace()==41))PoliceArchive.followup(player,clock,clock.currentPlace(),scanner);
+            if(choice==9 && clock.archiveComplete && clock.currentPlace()==41)PoliceArchive.followup(player,clock,clock.currentPlace(),scanner);
             if (choice == 11 && clock.currentPlace()==5) clock.courtyard().inspectPassage(clock,scanner);
             if (choice == 4) player.toggleFlashlight();
             if (choice == 5) Survivor.rest(player, 30);

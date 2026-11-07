@@ -465,7 +465,7 @@ class Locations implements java.io.Serializable {
                     locked("Диспетчерская эвакуации", "Карты, таблица перевозок и записи о маршрутах."));
             case 13 -> List.of(point("Гараж скорой", "Машины, носилки и ящики с расходниками."),
                     point("Диспетчерская", "Рации, журналы вызовов и карта района."),
-                    locked("Склад медикаментов", "Служебное помещение с повышенным шансом медицинской добычи."));
+                    locked("Склад медикаментов", "Служебное помещение с повышенным шансом медицинской добычи."), point("Комната отдыха","Дверь рядом с диспетчерской."), point("Моечная","Шланги, пустые канистры и шкаф для уборки."), point("Двор станции","Носилки у стены и брошенные дорожные сумки."));
             case 14 -> List.of(point("Гараж", "Пожарные машины, рукава и шкафчики смены."),
                     point("Раздевалка", "Личные вещи спасателей и защитная одежда."),
                     locked("Склад снаряжения", "Тяжёлая дверь. Возможны инструменты и пожарный топор."));
@@ -548,14 +548,14 @@ class Locations implements java.io.Serializable {
             case 35 -> List.of(point("Гаражный бокс", "Верстак, домкрат и разобранная машина."),
                     locked("Металлический гараж", "Тяжёлые ворота под лом. Внутри может быть как клад, так и пустой кузов."),
                     point("Сторожка", "Рация, ключи и журнал кооператива."),
-                    point("Яма обслуживания", "Инструменты и детали под машиной."));
+                    point("Яма обслуживания", "Инструменты и детали под машиной."), point("Служебный микроавтобус","Повреждённая передняя часть и наклейка скорой помощи."), point("Ряды гаражей","Приоткрытые ворота и оставленные тележки."));
             case 36 -> List.of(point("Подъёмники", "Разобранные машины, ключи и детали подвески."),
                     point("Склад запчастей", "Фильтры, ремни и металлические пластины."),
                     locked("Кабинет мастера", "Запертый офис с документами и инструментами."),
-                    point("Разбитые автомобили", "Можно найти аккумулятор или только очередную пустую бардачную легенду."));
+                    point("Разбитые автомобили", "Можно найти аккумулятор или только очередную пустую бардачную легенду."), point("Верстак механика","Тиски, крепёж и инструменты у стены."));
             case 37 -> List.of(point("Контейнеры", "Узкие проходы между грузом. Здесь легко попасть в засаду."),
                     point("Диспетчерская", "Накладные, маршруты и ключи от техники."),
-                    locked("Опечатанный контейнер", "Нужен лом. Маркировка не обещает, что внутри действительно ценное."));
+                    point("Погрузочный кран","Фура с открытой дверью и кабина оператора."), point("Площадка А","Поддоны со стройматериалами."), point("Площадка Б","Медицинские и гуманитарные грузы."), point("Площадка В","Ящики с техническим оборудованием."), locked("Площадка Г · служебный сектор","Закрытый проход к военным контейнерам."), point("Стоянка грузовиков","Кабины фур и пустые ящики у погрузочного ряда."));
             case 38 -> List.of(point("Кассы", "Билеты, мелочь и забытые сумки."),
                     point("Камеры хранения", "Часть ячеек вскрыта, часть ещё заперта."),
                     point("Диспетчерская", "Расписания, служебные бумаги и рация."),
@@ -635,6 +635,8 @@ class Locations implements java.io.Serializable {
         if (number == 6) return visited.contains(6) || getStories().apartment().hatchOpen();
         if (number == 7) return visited.contains(7) || visited.contains(6) || visited.contains(5);
         if (number == 8) return visited.contains(8) || getStories().schoolyard().schoolEntranceOpen();
+        RouteAfterArchive route = getStories().routeAfterArchive;
+        if (route != null && (number == 35 && route.driverLead || number == 36 && route.repairReceipt || number == 37 && route.terminalPass)) return true;
         int required = locations.get(number - 1).getRequiredLocation();
         return (required == 0 || visited.contains(required)) && (!locations.get(number - 1).isNightOnly() || getStories().isNight());
     }
@@ -676,6 +678,13 @@ class Locations implements java.io.Serializable {
                     for (Location.SearchPoint fresh : expected) for (Location.SearchPoint previous : old)
                         if ((fresh.name.equals(previous.name) || number==11 && (fresh.name.equals("Холодильный отсек") && previous.name.equals("Холодильная камера") || fresh.name.equals("Приёмная и журнал поставок") && previous.name.equals("Бухгалтерия")) || number==12 && (fresh.name.equals("Перевязочная") && previous.name.equals("Операционная") || fresh.name.equals("Палаты второго этажа") && previous.name.equals("Морг") || fresh.name.equals("Диспетчерская эвакуации") && previous.name.equals("Аптечный блок"))) && previous.isSearched()) fresh.markSearched();
                     location.setSearchPoints(expected);
+                }
+            } else if (RouteAfterArchive.handles(number)) {
+                List<Location.SearchPoint> old=location.getSearchPoints();
+                if(old.size()!=expected.size()){
+                    List<Location.SearchPoint> merged=new ArrayList<>();
+                    for(Location.SearchPoint fresh:expected) merged.add(old.stream().filter(p->p.name.equals(fresh.name)).findFirst().orElse(fresh));
+                    location.setSearchPoints(merged);
                 }
             } else if (!location.hasDetailedPoints() && !expected.isEmpty()) location.setSearchPoints(expected);
         }

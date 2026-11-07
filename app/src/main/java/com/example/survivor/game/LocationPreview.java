@@ -33,7 +33,7 @@ final class LocationPreview {
         Location place = world.getLocation(number);
         if(!world.isAvailable(number))return false;
         MonsterDens.Den den=world.getStories().monsterDens().ensure(world,number);
-        return (!place.isDepleted() || den!=null && den.accessible())
+        return (!place.isDepleted() || den!=null && den.accessible() || RouteAfterArchive.handles(number))
                 && (!place.isNightOnly() || untilDawn(world.getStories()) > TRAVEL_MINUTES + SearchMode.FAST.minutes);
     }
     static String profile(Location place) {

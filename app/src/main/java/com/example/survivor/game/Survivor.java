@@ -557,6 +557,7 @@ class AttackResult {
 class Survivor {
     public static void travel(SurvivorInfo player,String message,int steps){travel(player,message,steps,GameIO.footsteps());}
     static void travel(SurvivorInfo player, String message, int steps,GameSound surface) {
+        if(message.startsWith("Возвращение") && !GameIO.atHome() && GameIO.clock()!=null && GameIO.clock().currentPlace()==37 && GameIO.clock().routeAfterArchive!=null)GameIO.clock().routeAfterArchive.beforeTerminalExit(GameIO.clock(),GameIO.scanner());
         if(message.startsWith("Путь к локации:"))GameIO.travelTransition("Ты идёшь");
         else if(message.startsWith("Возвращение"))GameIO.travelTransition("Ты возвращаешься домой");
         if (player instanceof Fighter) ((Fighter) player).spendAvailableStamina(steps);
@@ -1421,6 +1422,17 @@ class Survivor {
                     locations.getStories().residential().onVisit(locations.getNumber(destination),locations.getStories(),(Fighter)selectedSurvivor);
 
                     int locationNumber = locations.getNumber(destination);
+                    if(RouteAfterArchive.handles(locationNumber)){
+                        WorldStories story=locations.getStories();
+                        story.residential().aborted=false;
+                        RouteAfterArchive route=story.routeAfterArchive();
+                        if(locationNumber==37)route.terminalArrival(story,scanner);
+                        route.visit((Fighter)selectedSurvivor,destination,story,locationNumber,scanner);
+                        if(!selectedSurvivor.isAlive()){running=false;continue;}
+                        GameIO.checkpoint();
+                        travel(selectedSurvivor,"Возвращение домой",5);
+                        continue;
+                    }
                     if (!returnedToBattle && locationNumber >= 4 && locationNumber <= 8 && selectedSurvivor instanceof Fighter) {
                         boolean safe = ExplorationEncounters.tryEncounter((Fighter)selectedSurvivor, locations, destination, scanner, ThreadLocalRandom.current());
                         if (!selectedSurvivor.isAlive()) { running=false; continue; }
@@ -1504,8 +1516,8 @@ class Survivor {
                                 if(SurvivalSystems.choice(scanner)==1)PoliceArchive.enter((Fighter)selectedSurvivor,locations.getStories(),scanner,ThreadLocalRandom.current());
                             }
 
-                            if(locations.getStories().archiveComplete && (locations.getNumber(destination)==13 || locations.getNumber(destination)==41)){
-                                GameIO.storyMenu(destination.getName(),"Обычные запасы исчерпаны. Сюжетная зацепка остаётся доступной.");GameIO.action(1,locations.getNumber(destination)==13?"Проверить медицинский экипаж №17":"Разведать резервный маршрут");GameIO.action(0,"Назад");
+                            if(locations.getStories().archiveComplete && locations.getNumber(destination)==41){
+                                GameIO.storyMenu(destination.getName(),"Обычные запасы исчерпаны. Сюжетная зацепка остаётся доступной.");GameIO.action(1,"Разведать резервный маршрут");GameIO.action(0,"Назад");
                                 if(SurvivalSystems.choice(scanner)==1)PoliceArchive.followup((Fighter)selectedSurvivor,locations.getStories(),locations.getNumber(destination),scanner);
                             }
                             List<ItemInfo> recovered=locations.getStories().guaranteedChips(locations.getNumber(destination));

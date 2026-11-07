@@ -41,7 +41,7 @@ final class StoryDialogueView extends FrameLayout {
   if(!f.menu.story)return false;
   String text=f.text+"\n"+f.menu.hint;
   for(GameMenu.Card card:f.menu.cards)text+="\n"+card.title+"\n"+card.detail;
-  return f.menu.title.equals("Кто-то ещё говорит") || f.menu.title.equals("Неустойчивый контакт") || text.matches("(?s).*(Джон|Семён|Марина|Артём|Кирилл|Виктор|Андрей|Ольга|Выживший|Рейдер)\\s*:.*");
+  return f.menu.title.equals("Кто-то ещё говорит") || f.menu.title.equals("Неустойчивый контакт") || text.matches("(?s).*(Джон|Семён|Марина|Артём|Кирилл|Виктор|Андрей|Ольга|Оля|Неизвестная|Выживший|Рейдер)\\s*:.*");
  }
  void showFrame(GameSession.Frame f){
   if(!matches(f)){if(f!=null&&f.mode!=GameSession.Mode.BUSY){setVisibility(GONE);frame=null;revision=-1;}return;}

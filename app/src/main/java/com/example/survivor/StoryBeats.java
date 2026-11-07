@@ -3,7 +3,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 /** Splits story prose into readable beats without changing the underlying choices. */
 final class StoryBeats {
- private static final Pattern SPEAKER=Pattern.compile("(?=(?:Джон|Семён|Андрей|Марина|Артём|Кирилл|Виктор(?: Павлович)?|Ольга|Выживший|Заведующий|Рейдер|Незнакомец|Голос):\\s*)");
+ private static final Pattern SPEAKER=Pattern.compile("(?=(?:Джон|Семён|Андрей|Марина|Артём|Кирилл|Виктор(?: Павлович)?|Ольга|Оля|Неизвестная|Выживший|Заведующий|Рейдер|Незнакомец|Голос):\\s*)");
  static List<String> split(String text){
   List<String> result=new ArrayList<>();if(text==null)return result;
   for(String paragraph:text.split("\\n+"))for(String part:SPEAKER.split(paragraph)){

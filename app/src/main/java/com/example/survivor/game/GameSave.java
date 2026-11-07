@@ -46,7 +46,7 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
         Set<String> allowed = new HashSet<>(Arrays.asList("GameSave", "SurvivorInfo", "Fighter", "Medic", "Engineer",
                 "Locations", "Location", "Location$SearchPoint", "LocationState", "LootProfile",
                 "BodyPart", "BodyInjury", "ItemInfo", "Food", "WildFood", "ForestStories", "SemenStory", "MonsterDens", "MonsterDens$Den", "Tools", "Weapons", "MedicalItem",
-                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor"));
+                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "RouteAfterArchive", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor"));
         Set<String> standard = new HashSet<>(Arrays.asList("java.lang.Enum", "java.lang.String", "java.lang.Object",
                 "java.lang.Integer", "java.lang.Number", "java.util.ArrayList", "java.util.HashSet", "java.util.HashMap",
                 "java.util.EnumMap", "java.util.IdentityHashMap"));

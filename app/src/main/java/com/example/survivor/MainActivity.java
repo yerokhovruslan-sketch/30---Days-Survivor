@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private MenuRenderer renderer;
     private WorldMapView worldMap;
     private StoryDialogueView storyView;
+    private TerminalPuzzleView terminalPuzzle;
 
     private long dismissedRevision = -1;
     private android.widget.FrameLayout searchOverlay;
@@ -64,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(worldMap, new android.widget.FrameLayout.LayoutParams(-1,-1));
         storyView = new StoryDialogueView(this, number -> { game.clickSound(); submit(number); }, savedInstanceState);
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(storyView, new android.widget.FrameLayout.LayoutParams(-1,-1));
+        terminalPuzzle=new TerminalPuzzleView(this,this::submit);
+        ((android.widget.FrameLayout)findViewById(R.id.main)).addView(terminalPuzzle,new android.widget.FrameLayout.LayoutParams(-1,-1));
         installTravelOverlay();
         game.travelScene().observe(this,this::showTravelScene);
         installSearchOverlay();
@@ -141,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
+                if (terminalPuzzle != null && terminalPuzzle.getVisibility() == View.VISIBLE) return;
                 if (travelOverlay != null && travelOverlay.getVisibility() == View.VISIBLE) return;
                 if (searchOverlay != null && searchOverlay.getVisibility() == View.VISIBLE) return;
                 if (storyView != null && storyView.getVisibility() == View.VISIBLE) return;
@@ -201,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
         searchText.animate().alpha(1f).setStartDelay(350).setDuration(750).start();
         dotsStep=0;dotsHandler.post(dotsTick);
     }
-    @Override protected void onDestroy(){dotsHandler.removeCallbacksAndMessages(null);travelHandler.removeCallbacksAndMessages(null);super.onDestroy();}
+    @Override protected void onDestroy(){if(terminalPuzzle!=null)terminalPuzzle.close();dotsHandler.removeCallbacksAndMessages(null);travelHandler.removeCallbacksAndMessages(null);super.onDestroy();}
 
     private void submit(int action) {
         GameSession.Frame pending = frame;
@@ -215,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
         frame = current;
         worldMap.showFrame(current);
         storyView.showFrame(current);
+        terminalPuzzle.showFrame(current);
         findViewById(R.id.action_save).setVisibility(current.savesAllowed ? View.VISIBLE : View.GONE);
         findViewById(R.id.action_load).setVisibility(current.savesAllowed ? View.VISIBLE : View.GONE);
         ((Button) findViewById(R.id.action_exit)).setText(current.savesAllowed ? R.string.menu_exit : R.string.menu_exit_without_save);
