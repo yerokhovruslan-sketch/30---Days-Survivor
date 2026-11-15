@@ -1340,19 +1340,20 @@ class Survivor {
     public static void main(String[] args) throws InterruptedException {
         Scanner scanner = GameIO.scanner();
         GameSave loaded = null;
+        int selectedDifficulty = 0;
         while(true){
             boolean available=!SaveSlots.all(GameIO.saveFile()).isEmpty();
             GameIO.menu("SURVIVOR","");GameIO.scene("opening_start");
             GameIO.action(1,"Новая игра");GameIO.action(2,"Продолжить","Последнее сохранение",available);GameIO.action(3,"Загрузить","Выбрать сохранение",available);
             int start=SurvivalSystems.choice(scanner);
-            if(start==1){try{SaveSlots.snapshot(GameIO.saveFile());}catch(java.io.IOException e){GameIO.menu("Не удалось сохранить прежний прогресс",e.getMessage());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);continue;}break;}
+            if(start==1){try{SaveSlots.snapshot(GameIO.saveFile());}catch(java.io.IOException e){GameIO.menu("Не удалось сохранить прежний прогресс",e.getMessage());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);continue;}selectedDifficulty=Difficulty.choose(scanner);if(selectedDifficulty==0)continue;break;}
             if(start==2&&available){try{loaded=SaveSlots.latest(GameIO.saveFile());}catch(java.io.IOException e){GameIO.menu("Не удалось загрузить",e.getMessage());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);continue;}}
             if(start==3&&available)loaded=SaveSlots.choose(GameIO.saveFile(),scanner);
             if(loaded!=null&&loaded.player.isAlive())break;loaded=null;
         }
         SurvivorInfo selectedSurvivor = loaded == null ? new Fighter("John", "Боец", 100) : asJohn(loaded.player);
         if(loaded==null) {
-            selectedSurvivor.chooseDifficulty(Difficulty.choose(scanner));
+            selectedSurvivor.chooseDifficulty(selectedDifficulty);
             Fighter beginner=(Fighter)selectedSurvivor;
         }
         boolean running = true;

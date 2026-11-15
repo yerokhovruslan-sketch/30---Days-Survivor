@@ -14,6 +14,7 @@ import java.util.function.IntConsumer;
 /** Map pins correspond to actual discovered locations, never invented route data. */
 final class WorldMapView extends FrameLayout {
  private final IntConsumer choose;
+ private final Runnable unavailable;
  private final MapCanvas map;
  private final LinearLayout top,bottom;
  private GameSession.Frame frame;
@@ -21,15 +22,16 @@ final class WorldMapView extends FrameLayout {
  private int selectedRegion=-1;
  private MediaPlayer wind;
  private boolean foreground=true;
- WorldMapView(Context c,IntConsumer choose){super(c);this.choose=choose;setBackgroundColor(Color.BLACK);setClickable(true);
+ WorldMapView(Context c,IntConsumer choose,Runnable unavailable){super(c);this.choose=choose;this.unavailable=unavailable;setBackgroundColor(Color.BLACK);setClickable(true);
   map=new MapCanvas(c);addView(map,new LayoutParams(-1,-1));
-  top=new LinearLayout(c);top.setOrientation(LinearLayout.VERTICAL);top.setPadding(dp(16),dp(12),dp(16),dp(12));top.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xf5000000,0xe9141414,0x99111111}));addView(top,new LayoutParams(-1,-2,Gravity.TOP));
-  bottom=new LinearLayout(c);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));bottom.setBackgroundColor(0xcc080808);addView(bottom,new LayoutParams(-1,-2,Gravity.BOTTOM));
-  control("← Назад",()->{if(selectedRegion>=0){selectedRegion=-1;selected=0;map.animateOverview();renderHeader();}else choose.accept(0);},1);control("−",()->map.changeZoom(.8f),0);control("+",()->map.changeZoom(1.25f),0);control("Тело",()->choose.accept(100),0);setVisibility(GONE);
+  top=new LinearLayout(c);top.setOrientation(LinearLayout.VERTICAL);top.setPadding(dp(12),dp(4),dp(12),dp(4));top.setVisibility(GONE);
+  LinearLayout footer=new LinearLayout(c);footer.setOrientation(LinearLayout.VERTICAL);footer.setBackgroundColor(0xcc080808);addView(footer,new LayoutParams(-1,-2,Gravity.BOTTOM));footer.addView(top);
+  bottom=new LinearLayout(c);bottom.setPadding(dp(8),dp(6),dp(8),dp(6));footer.addView(bottom);
+  control("← Назад",()->{if(selectedRegion>=0){selectedRegion=-1;selected=0;map.animateOverview();renderHeader();}else choose.accept(0);},1);control("Тело",()->choose.accept(100),0);setVisibility(GONE);
  }
  private int dp(float v){return Math.round(v*getResources().getDisplayMetrics().density);}
  private TextView label(String text,int size,boolean bold){TextView t=new TextView(getContext());t.setText(text);t.setTextColor(Color.WHITE);t.setTextSize(size);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
- private void control(String text,Runnable action,int weight){TextView t=label(text,15,true);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),dp(12),dp(12),dp(12));t.setOnClickListener(v->action.run());bottom.addView(t,new LinearLayout.LayoutParams(weight==1?0:-2,-2,weight));}
+ private void control(String text,Runnable action,int weight){TextView t=label(text,15,true);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),dp(12),dp(12),dp(12));GradientDrawable bg=new GradientDrawable();bg.setColor(0xff29231f);bg.setCornerRadius(dp(8));bg.setStroke(dp(1),0xff9b856f);t.setBackground(bg);t.setOnClickListener(v->action.run());bottom.addView(t,new LinearLayout.LayoutParams(weight==1?0:-2,-2,weight));}
  static boolean matches(GameSession.Frame f){return f!=null&&f.mode==GameSession.Mode.CHOICE&&f.home&&f.menu.title.equals("Карта локаций")&&f.choices.stream().anyMatch(c->c.artwork.startsWith("map_point_"));}
  void showFrame(GameSession.Frame f){
   if(!matches(f)){stopWind();if(f!=null&&f.mode!=GameSession.Mode.BUSY){setVisibility(GONE);frame=null;selected=0;}return;}
@@ -42,17 +44,15 @@ final class WorldMapView extends FrameLayout {
  private void stopWind(){if(wind!=null){try{wind.stop();}catch(RuntimeException ignored){}wind.release();wind=null;}}
  @Override protected void onDetachedFromWindow(){stopWind();super.onDetachedFromWindow();}
  private GameSession.Choice choice(int n){if(frame==null)return null;for(GameSession.Choice c:frame.choices)if(c.number==n&&c.artwork.equals("map_point_"+n))return c;return null;}
- private void select(int number){if(choice(number)==null)return;if(selected==number){choose.accept(number);return;}selected=number;renderHeader();map.invalidate();}
- private void selectRegion(int region){if(region<0||region==selectedRegion)return;selectedRegion=region;selected=0;renderHeader();map.animateRegion(region);}
- private void renderHeader(){top.animate().cancel();top.removeAllViews();GameSession.Choice c=choice(selected);
-  top.addView(label(c==null?(selectedRegion<0?"КАРТА ЛОКАЦИЙ":MapRegions.NAMES[selectedRegion]):c.label,23,true));TextView detail=label(c==null?(selectedRegion<0?"Нажмите на область карты":"Выберите значок локации или другую область"):c.detail,14,false);detail.setTextColor(0xffded8cb);top.addView(detail);
-  if(c!=null){TextView hint=label("Нажмите на лупу ещё раз, чтобы открыть",12,false);hint.setTextColor(0xffb7b0a3);top.addView(hint);}
-  top.setAlpha(0);top.animate().alpha(1).setDuration(300).start();
+ private void select(int number){if(choice(number)==null)return;if(choice(number).detail.startsWith("Сейчас закрыта")){unavailable.run();map.shake(number);return;}if(selected==number){choose.accept(number);return;}selected=number;renderHeader();map.invalidate();}
+ private void selectRegion(int region){if(region<0)return;if(region==selectedRegion){selectedRegion=-1;selected=0;renderHeader();map.animateOverview();return;}selectedRegion=region;selected=0;renderHeader();map.animateRegion(region);}
+ private void renderHeader(){top.removeAllViews();GameSession.Choice c=choice(selected);top.setVisibility(c==null?GONE:VISIBLE);
+  if(c!=null){top.addView(label(c.label,18,true));TextView detail=label(c.detail+"\nНажмите ещё раз, чтобы открыть",12,false);detail.setTextColor(0xffded8cb);top.addView(detail);}
  }
  private final class MapCanvas extends View {
   Bitmap image,pin;final Bitmap[] zoneIcons=new Bitmap[4],clouds=new Bitmap[3],cloudPieces=new Bitmap[MapClouds.count()];
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);final ScaleGestureDetector detector;
-  float zoom=1,offsetX,offsetY,downX,downY,lastX,lastY,pinAlpha;boolean moved,scaled;ValueAnimator animation;
+  float zoom=1,offsetX,offsetY,downX,downY,lastX,lastY,pinAlpha,shakeOffset;int shaking;boolean moved,scaled;ValueAnimator animation;
   // Coordinates correspond to city, medical district, forest, quarry, roads and industrial sites in the map artwork.
   final float[][] xy={{0,0},{.19f,.64f},{.30f,.29f},{.37f,.56f},{.26f,.61f},{.14f,.59f},{.12f,.53f},{.13f,.70f},{.21f,.69f},{.30f,.72f},
    {.36f,.45f},{.42f,.48f},{.40f,.42f},{.31f,.46f},{.27f,.50f},{.21f,.48f},{.17f,.45f},{.27f,.44f},{.34f,.51f},
@@ -99,6 +99,7 @@ final class WorldMapView extends FrameLayout {
    }
    Bitmap result=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);result.setHasAlpha(true);result.setPixels(pixels,0,width,0,0,width,height);return result;
   }
+  void shake(int number){shaking=number;ValueAnimator wiggle=ValueAnimator.ofFloat(0,1);wiggle.setDuration(330);wiggle.addUpdateListener(a->{float f=(float)a.getAnimatedValue();shakeOffset=(float)Math.sin(f*Math.PI*6)*dp(5)*(1-f);if(f>=1)shaking=0;invalidate();});wiggle.start();}
   void reset(){if(animation!=null)animation.cancel();zoom=1;offsetX=offsetY=0;pinAlpha=0;invalidate();}
   void animateOverview(){animateTo(1,0,0,false);}
   void animateRegion(int region){float target=2.2f;float cx=MapRegions.center(region,true),cy=MapRegions.center(region,false);
@@ -135,10 +136,12 @@ final class WorldMapView extends FrameLayout {
    for(int zone=0;zone<MapRegions.SHAPES.length;zone++){float[] points=MapRegions.SHAPES[zone];Path path=new Path();path.moveTo(originX+points[0]*image.getWidth()*scale,originY+points[1]*image.getHeight()*scale);for(int j=2;j<points.length;j+=2)path.lineTo(originX+points[j]*image.getWidth()*scale,originY+points[j+1]*image.getHeight()*scale);path.close();
     paint.setStyle(Paint.Style.STROKE);paint.setColor(Color.WHITE);paint.setStrokeWidth(dp(1.5f));paint.setAlpha(150);paint.setPathEffect(new CornerPathEffect(dp(3)));c.drawPath(path,paint);paint.setPathEffect(null);paint.setStyle(Paint.Style.FILL);
    }
-   for(int zone=0;zone<MapRegions.SHAPES.length;zone++){int icon=zone==0||zone==6?0:zone==1?1:zone==2||zone==5?2:3;Bitmap badge=zoneIcons[icon];if(badge==null)continue;float px=originX+MapRegions.center(zone,true)*image.getWidth()*scale,py=originY+MapRegions.center(zone,false)*image.getHeight()*scale;float r=dp(selectedRegion==zone?24:20);paint.setColor(Color.WHITE);paint.setAlpha(selectedRegion==zone?230:200);c.drawBitmap(badge,null,new RectF(px-r,py-r,px+r,py+r),paint);}
-   if(selectedRegion>=0){float radius=dp(15);paint.setAlpha(Math.round(255*pinAlpha));for(GameSession.Choice item:frame.choices){int n=item.number;if(n<1||n>=xy.length||!item.artwork.equals("map_point_"+n)||MapRegions.at(xy[n][0],xy[n][1])!=selectedRegion)continue;float x=x(n),y=y(n);if(n==selected){paint.setColor(0xffffdb93);paint.setAlpha(Math.round(255*pinAlpha));c.drawCircle(x,y,radius+dp(3),paint);}paint.setColor(Color.WHITE);paint.setAlpha(Math.round(255*pinAlpha));c.drawBitmap(pin,null,new RectF(x-radius,y-radius,x+radius,y+radius),paint);}}
+   for(int zone=0;zone<MapRegions.SHAPES.length;zone++){int icon=zone==0||zone==6?0:zone==1?1:zone==2||zone==5?2:3;Bitmap badge=zoneIcons[icon];if(badge==null)continue;float px=originX+MapRegions.center(zone,true)*image.getWidth()*scale,py=originY+MapRegions.center(zone,false)*image.getHeight()*scale;float r=dp(selectedRegion==zone?24:20);paint.setColor(Color.WHITE);paint.setAlpha(selectedRegion==zone?65:200);c.drawBitmap(badge,null,new RectF(px-r,py-r,px+r,py+r),paint);boolean hasNew=false;for(GameSession.Choice item:frame.choices){int n=item.number;if(n>0&&n<xy.length&&item.artwork.equals("map_point_"+n)&&MapRegions.at(xy[n][0],xy[n][1])==zone&&item.detail.startsWith("Доступна")&&item.detail.contains("Не посещена")){hasNew=true;break;}}if(hasNew)drawNew(c,px+r*.7f,py-r*.7f,1);}
+   if(selectedRegion>=0){float radius=dp(15);paint.setAlpha(Math.round(255*pinAlpha));for(GameSession.Choice item:frame.choices){int n=item.number;if(n<1||n>=xy.length||!item.artwork.equals("map_point_"+n)||MapRegions.at(xy[n][0],xy[n][1])!=selectedRegion)continue;float x=x(n)+(shaking==n?shakeOffset:0),y=y(n);boolean closed=item.detail.startsWith("Сейчас закрыта"),visited=item.detail.contains(" · Посещена");if(n==selected){paint.setColor(0xffffdb93);paint.setAlpha(Math.round(255*pinAlpha));c.drawCircle(x,y,radius+dp(3),paint);}paint.setColor(Color.WHITE);paint.setAlpha(Math.round(255*pinAlpha));if(closed){ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(0);paint.setColorFilter(new ColorMatrixColorFilter(matrix));paint.setAlpha(Math.round(165*pinAlpha));}c.drawBitmap(pin,null,new RectF(x-radius,y-radius,x+radius,y+radius),paint);paint.setColorFilter(null);
+    if(visited){paint.setAlpha(Math.round(255*pinAlpha));paint.setColor(Color.WHITE);c.drawCircle(x+radius*.72f,y-radius*.72f,dp(5),paint);paint.setColor(Color.BLACK);c.drawCircle(x+radius*.72f,y-radius*.72f,dp(3.5f),paint);}else if(!closed){drawNew(c,x+radius*.72f,y-radius*.72f,pinAlpha);}}}
    paint.setAlpha(255);if(getVisibility()==VISIBLE && WorldMapView.this.getVisibility()==VISIBLE)postInvalidateDelayed(80);
   }
+  void drawNew(Canvas c,float x,float y,float alpha){paint.setAlpha(Math.round(255*alpha));paint.setColor(0xffffca70);c.drawCircle(x,y,dp(7),paint);paint.setColor(Color.BLACK);paint.setTypeface(Typeface.DEFAULT_BOLD);paint.setTextSize(dp(11));paint.setTextAlign(Paint.Align.CENTER);c.drawText("!",x,y+dp(4),paint);paint.setTextAlign(Paint.Align.LEFT);}
   @Override public boolean onTouchEvent(android.view.MotionEvent e){if(image==null||pin==null)return true;detector.onTouchEvent(e);switch(e.getActionMasked()){
    case MotionEvent.ACTION_DOWN:if(animation!=null&&animation.isRunning()){animation.cancel();pinAlpha=selectedRegion<0?0:1;}downX=lastX=e.getX();downY=lastY=e.getY();moved=false;scaled=false;return true;
    case MotionEvent.ACTION_POINTER_DOWN:scaled=true;return true;

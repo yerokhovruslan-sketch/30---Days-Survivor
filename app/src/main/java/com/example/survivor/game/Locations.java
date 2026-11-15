@@ -721,7 +721,7 @@ class Locations implements java.io.Serializable {
             int number=readChoice(scanner);
             if(number==0)return null;
             if(number==100){if(survivor instanceof Fighter)Survivor.inspectBody((Fighter)survivor,scanner);continue;}
-            if(number<1||number>53||!isAvailable(number)&&!isVisited(number))continue;
+            if(number<1||number>53||!isAvailable(number))continue;
             Location location=getLocation(number);
             if(LocationPreview.show(this,number,survivor,scanner))return location;
         }

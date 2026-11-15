@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private StoryDialogueView storyView;
     private TerminalPuzzleView terminalPuzzle;
     private OpeningView openingView;
+    private DifficultySelectionView difficultyView;
 
     private long dismissedRevision = -1;
     private android.widget.FrameLayout searchOverlay;
@@ -46,14 +47,25 @@ public class MainActivity extends AppCompatActivity {
         dotsHandler.postDelayed(this,440);
     }};
 
+    private void hideSystemBars() {
+        androidx.core.view.WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setSystemBarsBehavior(androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+    }
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemBars();
+    }
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).setAppearanceLightStatusBars(false);
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).setAppearanceLightNavigationBars(false);
+        hideSystemBars();
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (view, insets) -> {
-            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.ime());
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
             return insets;
         });
@@ -62,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         game = new ViewModelProvider(this).get(GameViewModel.class);
-        worldMap = new WorldMapView(this, number -> { game.clickSound(); submit(number); });
+        worldMap = new WorldMapView(this, number -> { game.clickSound(); submit(number); }, () -> game.unavailableSound());
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(worldMap, new android.widget.FrameLayout.LayoutParams(-1,-1));
         storyView = new StoryDialogueView(this, number -> { game.clickSound(); submit(number); }, savedInstanceState);
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(storyView, new android.widget.FrameLayout.LayoutParams(-1,-1));
@@ -72,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(openingView,new android.widget.FrameLayout.LayoutParams(-1,-1));
         game.openingSeconds().observe(this,seconds->openingView.seconds(seconds));
         game.openingMillis().observe(this,millis->openingView.remaining(millis));
+        difficultyView=new DifficultySelectionView(this,number->{if(number>0)openingView.showNextSceneInstantly();else game.clickSound();submit(number);});
+        ((android.widget.FrameLayout)findViewById(R.id.main)).addView(difficultyView,new android.widget.FrameLayout.LayoutParams(-1,-1));
         installTravelOverlay();
         game.travelScene().observe(this,this::showTravelScene);
         installSearchOverlay();
@@ -152,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
+                if (difficultyView != null && difficultyView.getVisibility() == View.VISIBLE) return;
                 if (terminalPuzzle != null && terminalPuzzle.getVisibility() == View.VISIBLE) return;
                 if (openingView != null && openingView.getVisibility() == View.VISIBLE) {moveTaskToBack(true);return;}
                 if (travelOverlay != null && travelOverlay.getVisibility() == View.VISIBLE) return;
@@ -228,6 +243,8 @@ public class MainActivity extends AppCompatActivity {
         frame = current;
         if(current.mode==GameSession.Mode.BUSY){openingView.show(current);return;}
         openingView.show(current);
+        boolean difficulty=current.mode==GameSession.Mode.CHOICE && current.menu.title.equals("Уровень сложности");
+        if(difficulty){difficultyView.setVisibility(View.VISIBLE);difficultyView.show(current);}else difficultyView.setVisibility(View.GONE);
         worldMap.showFrame(current);
         storyView.showFrame(current);
         terminalPuzzle.showFrame(current);
@@ -254,8 +271,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         // Returning home and completed actions go straight to the home menu.
-        boolean show = current.mode != GameSession.Mode.MAIN || ((current.menu.title.equals("Состояние Джона") || current.text.startsWith("Не удалось")) && dismissedRevision != current.revision);
+        boolean dedicatedScreen = OpeningView.matches(current) || difficulty || WorldMapView.matches(current) || StoryDialogueView.matches(current) || terminalPuzzle.getVisibility()==View.VISIBLE || !current.menu.scene.isEmpty();
+        boolean show = !dedicatedScreen && (current.mode != GameSession.Mode.MAIN || ((current.menu.title.equals("Состояние Джона") || current.text.startsWith("Не удалось")) && dismissedRevision != current.revision));
         panel.setVisibility(show ? View.VISIBLE : View.GONE);
+        findViewById(R.id.home_content).setVisibility(!show && !dedicatedScreen ? View.VISIBLE : View.GONE);
+        findViewById(R.id.home_background).setVisibility(!show && !dedicatedScreen ? View.VISIBLE : View.GONE);
         if (!show) return;
         renderer.render(current, game.section);
     }

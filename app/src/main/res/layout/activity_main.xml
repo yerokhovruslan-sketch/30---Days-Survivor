@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#0E0E0E">
-<ImageView android:layout_width="match_parent" android:layout_height="480dp" android:scaleType="centerCrop" android:src="@drawable/home_backdrop" android:importantForAccessibility="no" />
-<ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+<ImageView android:id="@+id/home_background" android:layout_width="match_parent" android:layout_height="480dp" android:scaleType="centerCrop" android:src="@drawable/home_backdrop" android:importantForAccessibility="no" />
+<ScrollView android:id="@+id/home_content" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/game_title" android:textColor="#C7B9A9" android:textSize="56sp" android:textStyle="bold" android:fontFamily="sans-serif-condensed" android:letterSpacing="0.12" android:layout_marginTop="12dp" />
 
