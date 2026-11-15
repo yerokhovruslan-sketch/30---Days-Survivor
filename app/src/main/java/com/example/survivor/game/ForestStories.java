@@ -17,6 +17,8 @@ final class ForestStories implements Serializable {
     int andrey,deadline,boxState;
     boolean questStarted,boxOpened,talked,robFood,robWater,robBandage;
     boolean campfireIntro,campfireEnded;
+    int campfireFinishedAt;
+    boolean campfireResting(WorldStories w){return campfireFinishedAt>0 && w.absoluteMinute()<campfireFinishedAt-1+1440;}
     int campfireTopics,campfireIntroChoice,campfireFinishChoice;
     int[] campfireAnswers;
     boolean boxRequired(){return andrey==2;}
@@ -43,7 +45,7 @@ final class ForestStories implements Serializable {
         GameIO.action(1,"Обыскать точки локации",loc.getRemainingSearches()>0?"Обычный поиск":"Обычные точки уже обысканы",loc.getRemainingSearches()>0);
         int wait=Math.max(0,availableAt(place)-w.absoluteMinute());GameIO.action(2,"Искать грибы и ягоды",wait>0?"Повторный поиск через "+((wait+59)/60)+" ч":"15 минут · находка не гарантирована",wait==0);
         if(place==20){
-            GameIO.action(3,andrey==0?"Осмотреть следы у избушки":"Андрей у избушки",andrey==5?"Осталась записка":andrey==7?"Избушка опустела":"Кострище и укрытие лесника");
+            if(!w.homeSurvivors().atHome(HomeSurvivors.ANDREY))GameIO.action(3,andrey==0?"Осмотреть следы у избушки":"Андрей у избушки",andrey==5?"Осталась записка":andrey==7?"Избушка опустела":"Кострище и укрытие лесника");
             if(!cacheKnown)GameIO.action(4,"Изучить старую карту охотника","5 минут · возможная подсказка");
         }
         if(place==21&&!campSeen)GameIO.action(3,"Проверить следы чужого лагеря","Свежие следы и кострище · 5 минут");
@@ -56,7 +58,7 @@ final class ForestStories implements Serializable {
         if(action==2&&wait==0)forage(p,place,w,random);
         else if(action==7&&den!=null&&den.accessible()){if(!w.monsterDens().visit(p,w,place,scanner,random))return -1;}
         else if(action==8)Survivor.inspectBody(p,scanner);else if(action==9)Survivor.rest(p,30);
-        else if(place==20&&action==3)andrey(p,w,scanner,random,wallet);
+        else if(place==20&&action==3&&!w.homeSurvivors().atHome(HomeSurvivors.ANDREY))andrey(p,w,scanner,random,wallet);
         else if(place==20&&action==4&&!cacheKnown&&time(p,w,5,1)){cacheKnown=true;note(w,"Старый охотничий тайник","На старой карте в избушке отмечено дерево у лесной тропы. Под корнями отмечен небольшой охотничий тайник.");}
         else if(place==21&&action==3&&!campSeen&&time(p,w,5,1)){campSeen=true;note(w,"Чужой лагерь","У кострища две жестяные кружки, рядом свежие следы обуви. Пепел ещё хранит тепло. Джон не знает, кто здесь был и собирается ли вернуться.");}
         else if(place==19&&action==3&&cacheKnown)cache(p,w,scanner);
@@ -127,9 +129,10 @@ final class ForestStories implements Serializable {
                 if(boxOpened){andrey=6;note(w,"Ящик вскрыт","Андрей заметил, что часть снастей пропала. Ящик он принял, но доверие потеряно.");return;}
                 andrey=3;p.addItem(Shop.createItem(16));wallet[0]=(int)Math.min(Integer.MAX_VALUE,(long)wallet[0]+15);GameIO.balance(wallet[0]);note(w,"Ящик возвращён Андрею","«Думал, всё уже растащили. Спасибо». Андрей отдал Джону галеты и 15 $. За помощь он готов рассказать о лесных маршрутах.");return;
             }else if(andrey==3){
-                GameIO.storyMenu("Андрей у избушки","Лесник узнаёт Джона и убирает трубу. Ящик со снастями снова у него.");GameIO.action(1,"Разговор по душам","Поговорить без спешки",AndreyCampfire.available(this));GameIO.action(2,"Спросить о лесных маршрутах");GameIO.action(0,"Уйти");int c=SurvivalSystems.choice(scanner);if(c==0)return;
-                if(c==1 && AndreyCampfire.available(this))AndreyCampfire.open(this,p,w,scanner);
-                if(c==2)ResidentialStories.pause("Совет Андрея","«К воде безопаснее выходить через лодочную станцию. Если тропа кажется слишком тихой, не спеши — сначала прислушайся».",scanner);
+                GameIO.storyMenu("Андрей у избушки","Лесник узнаёт Джона и убирает трубу. Ящик со снастями снова у него.");GameIO.action(1,"Разговор по душам",campfireResting(w)?"Андрей отдыхает. Приходите через сутки":"Поговорить без спешки",AndreyCampfire.available(this)&&!campfireResting(w));GameIO.action(2,"Спросить о лесных маршрутах",campfireResting(w)?"Андрей отдыхает. Приходите через сутки":"",!campfireResting(w));if(campfireEnded)GameIO.action(3,"Предложить Андрею пойти вместе домой");GameIO.action(0,"Уйти");int c=SurvivalSystems.choice(scanner);if(c==0)return;
+                if(c==3&&campfireEnded&&w.homeSurvivors().invite(HomeSurvivors.ANDREY,w,scanner))return;
+                if(c==1 && AndreyCampfire.available(this)&&!campfireResting(w))AndreyCampfire.open(this,p,w,scanner);
+                if(c==2&&!campfireResting(w))ResidentialStories.pause("Совет Андрея","«К воде безопаснее выходить через лодочную станцию. Если тропа кажется слишком тихой, не спеши — сначала прислушайся».",scanner);
             }else {ResidentialStories.pause("Андрей у избушки",andrey==6?"Андрей держится сдержанно. Совместных дел он пока не предлагает.":"Лесник остался в своём укрытии.",scanner);return;}
         }
     }

@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private WorldMapView worldMap;
     private StoryDialogueView storyView;
     private TerminalPuzzleView terminalPuzzle;
+    private OpeningView openingView;
 
     private long dismissedRevision = -1;
     private android.widget.FrameLayout searchOverlay;
@@ -67,17 +68,24 @@ public class MainActivity extends AppCompatActivity {
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(storyView, new android.widget.FrameLayout.LayoutParams(-1,-1));
         terminalPuzzle=new TerminalPuzzleView(this,this::submit);
         ((android.widget.FrameLayout)findViewById(R.id.main)).addView(terminalPuzzle,new android.widget.FrameLayout.LayoutParams(-1,-1));
+        openingView=new OpeningView(this,number->{game.clickSound();submit(number);});
+        ((android.widget.FrameLayout)findViewById(R.id.main)).addView(openingView,new android.widget.FrameLayout.LayoutParams(-1,-1));
+        game.openingSeconds().observe(this,seconds->openingView.seconds(seconds));
+        game.openingMillis().observe(this,millis->openingView.remaining(millis));
         installTravelOverlay();
         game.travelScene().observe(this,this::showTravelScene);
         installSearchOverlay();
         game.searchScene().observe(this, this::showSearchScene);
-        findViewById(R.id.character_day).setOnClickListener(v->{
+        ((HomeHud)findViewById(R.id.home_hud)).onClockClick(v->{
             game.pauseWorld(true);
             new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Пауза")
                 .setMessage("Время расходуется только на действия: дорогу, поиск, бой, отдых и изготовление. Чтение и меню не продвигают часы.")
                 .setPositiveButton("Продолжить",(d,w)->{}).setOnDismissListener(d->game.pauseWorld(false)).show();
         });
-        findViewById(R.id.panel_world_clock).setOnClickListener(v->findViewById(R.id.character_day).performClick());
+        findViewById(R.id.panel_world_clock).setOnClickListener(v->{
+            game.pauseWorld(true);
+            new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Пауза").setMessage("Время расходуется только на действия: дорогу, поиск, бой, отдых и изготовление. Чтение и меню не продвигают часы.").setPositiveButton("Продолжить",(d,w)->{}).setOnDismissListener(d->game.pauseWorld(false)).show();
+        });
         findViewById(R.id.radio_continue).setSoundEffectsEnabled(false);
         findViewById(R.id.radio_continue).setOnClickListener(view->{if(TapFeedback.run(view,()->game.continueRadio()))game.clickSound();});
         game.radioState().observe(this,state->{
@@ -123,9 +131,9 @@ public class MainActivity extends AppCompatActivity {
                 R.id.action_shop, R.id.action_heal, R.id.action_equipment, R.id.action_rest,
                 R.id.action_notes, R.id.action_eat, R.id.action_sleep, R.id.action_save,
                 R.id.action_load, R.id.action_unload, R.id.action_repair, R.id.action_armor,
-                R.id.action_journal, R.id.action_exit, R.id.action_shelter};
+                R.id.action_journal, R.id.action_exit, R.id.action_shelter, R.id.action_survivors};
         for (int i = 0; i < actions.length; i++) {
-            final int action = i == 16 ? 0 : i == 17 ? 17 : i + 1;
+            final int action = i == 16 ? 0 : i == 17 ? 17 : i == 18 ? 18 : i + 1;
             Button button = findViewById(actions[i]);
             button.setSoundEffectsEnabled(false);
             MenuArtwork.apply(button, MenuArtwork.forButton(actions[i]));
@@ -145,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 if (terminalPuzzle != null && terminalPuzzle.getVisibility() == View.VISIBLE) return;
+                if (openingView != null && openingView.getVisibility() == View.VISIBLE) {moveTaskToBack(true);return;}
                 if (travelOverlay != null && travelOverlay.getVisibility() == View.VISIBLE) return;
                 if (searchOverlay != null && searchOverlay.getVisibility() == View.VISIBLE) return;
                 if (storyView != null && storyView.getVisibility() == View.VISIBLE) return;
@@ -217,12 +226,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void render(GameSession.Frame current) {
         frame = current;
+        if(current.mode==GameSession.Mode.BUSY){openingView.show(current);return;}
+        openingView.show(current);
         worldMap.showFrame(current);
         storyView.showFrame(current);
         terminalPuzzle.showFrame(current);
         findViewById(R.id.action_save).setVisibility(current.savesAllowed ? View.VISIBLE : View.GONE);
         findViewById(R.id.action_load).setVisibility(current.savesAllowed ? View.VISIBLE : View.GONE);
-        ((Button) findViewById(R.id.action_exit)).setText(current.savesAllowed ? R.string.menu_exit : R.string.menu_exit_without_save);
+        ((Button) findViewById(R.id.action_exit)).setText(R.string.menu_exit);
         game.bindRadioScene(current);
         View sleepButton = findViewById(R.id.action_sleep);
         boolean canSleep = current.sleepiness > 40 && current.health > 0;
@@ -236,22 +247,14 @@ public class MainActivity extends AppCompatActivity {
             label.setSpan(new android.text.style.ForegroundColorSpan(0xffb8b8b8),title.length()+1,label.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             ((Button) sleepButton).setText(label);
         }
-        ((TextView) findViewById(R.id.character_day)).setText(getString(R.string.day_format, current.day) + " · " + current.time + " · " + current.difficulty + " · " + getString(current.night ? R.string.night_phase : R.string.day_phase));
+        ((HomeHud)findViewById(R.id.home_hud)).update(current);
         ((TextView)findViewById(R.id.panel_world_clock)).setText("День "+current.day+" · "+current.time+" · Время действий");
-        ((TextView) findViewById(R.id.character_balance)).setText(getString(R.string.balance_format, current.balance));
-
-        stat(R.id.stat_stamina, R.id.value_stamina, current.stamina, 100);
-        stat(R.id.stat_hunger, R.id.value_hunger, current.hunger, 100);
-        stat(R.id.stat_sleepiness, R.id.value_sleepiness, current.sleepiness, 100);
-        stat(R.id.stat_noise, R.id.value_noise, current.noise, 60);
         if (current.mode == GameSession.Mode.ENDED && (current.text.contains("Игра сохранена:") || current.text.contains("Игра завершена без сохранения."))) {
             finish();
             return;
         }
-        // A successful load goes directly to the main menu; retain real result and error screens.
-        boolean loadConfirmationOnly = current.mode == GameSession.Mode.MAIN
-                && current.menu.cards.isEmpty() && current.text.trim().equals("Прогресс загружен: John");
-        boolean show = current.mode != GameSession.Mode.MAIN || (!loadConfirmationOnly && (!current.text.isEmpty() || !current.menu.cards.isEmpty()) && dismissedRevision != current.revision);
+        // Returning home and completed actions go straight to the home menu.
+        boolean show = current.mode != GameSession.Mode.MAIN || ((current.menu.title.equals("Состояние Джона") || current.text.startsWith("Не удалось")) && dismissedRevision != current.revision);
         panel.setVisibility(show ? View.VISIBLE : View.GONE);
         if (!show) return;
         renderer.render(current, game.section);
@@ -273,9 +276,11 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onResume() {
         super.onResume();
         game.resumeMusic();
+        if(worldMap!=null)worldMap.foreground(true);
     }
 
     @Override protected void onPause() {
+        if(worldMap!=null)worldMap.foreground(false);
         game.pauseMusic();
         super.onPause();
     }

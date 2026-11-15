@@ -20,7 +20,7 @@ final class PharmacyWarehouse implements Serializable {
     private boolean key(Fighter p){return p.getInventory().stream().anyMatch(x->x.getName().equals(KEY));}
     private boolean known(WorldStories w){return w.clinic().cabinetManifest;}
     private void connections(WorldStories w){
-        if(known(w)&&journalRead&&!journalConnection){journalConnection=true;note(w,"След партии М-24","По номеру из поликлиники Джон находит запись: партия М-24 принята на аптечный склад, помещена в холодильный отсек и не отгружена.");}
+        if(known(w)&&journalRead&&!journalConnection){journalConnection=true;note(w,"След партии М-24","По номеру из поликлиники Джон находит запись: часть партии М-24 оставлена в холодильном отсеке аптечного склада и не отгружена; другая часть отправлена на грузовой терминал.");}
         if(known(w)&&coldManifest&&!coldConnection){coldConnection=true;note(w,"Найденная партия М-24","Вот она. Значит, запись в поликлинике не ошибалась: часть партии осталась на складе.");}
     }
     private boolean encounter(Fighter p,Scanner s,Random r,String terrain){return TacticalBattle.story(p,s,r,List.of(new Zombie(1,ZombieType.NORMAL)),terrain,List.of(),false,false,false);}
@@ -47,7 +47,7 @@ final class PharmacyWarehouse implements Serializable {
                     GameIO.action(3,"Изучить журнал поставок",journalRead?"Уже прочитан":"10 минут",!journalRead);GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
                     if(a==1&&!deskLoot&&time(p,w,5,1)&&take(p,Shop.createItem(43))){deskLoot=true;mark(loc,w,"Приёмная и журнал поставок");}
                     if(a==2&&!keyTaken&&time(p,w,5,1)&&take(p,new Tools(KEY,"Связка служебных ключей; подходит к холодильному отсеку.",1,0))){keyTaken=true;mark(loc,w,"Приёмная и журнал поставок");}
-                    if(a==3&&!journalRead&&time(p,w,10,1)){journalRead=true;note(w,"Журнал аптечного склада","Последние партии распределяли централизованно. Некоторые направлены: «Городской резерв. Специальное распределение». Подписи есть, адрес сокращён. Отдельная запись: «М-24. Принято. Размещено в холодильном отсеке. Не отгружено».");connections(w);mark(loc,w,"Приёмная и журнал поставок");}
+                    if(a==3&&!journalRead&&time(p,w,10,1)){journalRead=true;note(w,"Журнал аптечного склада","Последние партии распределяли централизованно. Некоторые направлены: «Городской резерв. Специальное распределение». Подписи есть, адрес сокращён. Отдельная запись: «М-24. Партия разделена: часть оставлена в холодильном отсеке, не отгружена; часть перенаправлена на грузовой терминал».");connections(w);mark(loc,w,"Приёмная и журнал поставок");}
                 }else if(section==2){
                     GameIO.menu("Основной склад",farCleared?"Передние стеллажи разграблены. За дальними рядами теперь тихо.":"Высокие стеллажи и вскрытые коробки. В глубине слышатся шаги; за рядами почти ничего не видно.");GameIO.illustratedCard("","","warehouse_art:pharmacy_main");
                     GameIO.action(1,"Осмотреть передние стеллажи",frontBandage?"Основная коробка уже осмотрена":"10 минут · низкий риск · бинт",!frontBandage);

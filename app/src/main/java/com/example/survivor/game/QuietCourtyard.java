@@ -9,6 +9,7 @@ final class QuietCourtyard implements Serializable {
     private static final long serialVersionUID = 1L;
     private boolean backpack, note, car, trunk, lockedTrunk, redCar, boxes, crowbar, basementOpen, basementSearched, garageLoot, garagePlan;
     private boolean basementThreatKnown, basementThreat, basementCleared, passageExamined;
+    private boolean firstAidTaken;
 
     private void mark(Location location, WorldStories world, String name) {
         for (Location.SearchPoint p : location.getSearchPoints()) if (p.name.equals(name)) { location.consumePoint(p); break; }
@@ -33,9 +34,11 @@ final class QuietCourtyard implements Serializable {
             GameIO.point(5,"Гараж дворника","Приоткрытая дверь и план территории",garageLoot&&garagePlan);
             if (world.day()>=3 || stories.family>0) GameIO.action(6,"Окно третьего этажа","За стеклом можно заметить движение");
             GameIO.action(7,"Передохнуть","20 минут · восстановить силы");
+            if(world.openingChoiceRecorded&&!world.openingFollowupSeen)GameIO.action(9,"Проверить следы у бокового выхода","Знакомое место возле подъезда");
             GameIO.action(0,"Вернуться домой");
             int choice=SurvivalSystems.choice(scanner);
             if(choice==0)return;
+            if(choice==9&&world.openingChoiceRecorded&&!world.openingFollowupSeen){world.openingFollowupSeen=true;String trace=world.openingChoice==1?"У бокового выхода Джон замечает перевязочный материал и следы волочившейся ноги. Человек, которого он помог вывести, ушёл отсюда. Дальнейшая его судьба неизвестна.":world.openingChoice==2?"У выхода лежит открытая аптечка. Из неё взяли бинт; на мокром полу видны смазанные следы. Джон не знает, кому удалось уйти.":"У лестницы видны засохшая кровь и смазанные следы. Джон вспоминает раненого, которого оставил в подъезде, но по следам нельзя понять, что с ним случилось.";world.note("Следы раненого",trace);GameIO.checkpoint();ResidentialStories.pause("Следы у выхода",trace,scanner);continue;}
             if(choice==7){Survivor.rest(p,30);continue;}
             if(choice==6 && (world.day()>=3 || stories.family>0)) { stories.visitWindow(world,p,scanner,random); if(stories.aborted || !p.isAlive())return; continue; }
             if(choice<1 || choice>5)continue;
@@ -43,9 +46,11 @@ final class QuietCourtyard implements Serializable {
                 if(choice==1) {
                     GameIO.menu("Детская площадка","Песочница, качели и разбросанные игрушки. Под скамейкой виднеется жестяная коробка.");
                     GameIO.action(1,"Проверить рюкзак",backpack?"Уже осмотрен":"5 минут",!backpack);
-                    GameIO.action(2,"Осмотреть под скамейкой",note?"Коробка осмотрена":"5 минут",!note);GameIO.action(0,"Не задерживаться");
+                    GameIO.action(2,"Осмотреть под скамейкой",note?"Коробка осмотрена":"5 минут",!note);
+                    GameIO.action(3,"Проверить маленькую аптечку",firstAidTaken?"Бинт уже забран":"5 минут · бинт",!firstAidTaken);GameIO.action(0,"Не задерживаться");
                     int a=SurvivalSystems.choice(scanner);if(a==0)break;
                     if(a==1 && !backpack && time(p,world,5,2) && take(p,Shop.createItem(16))) {backpack=true;mark(location,world,"Детская площадка");}
+                    if(a==3&&!firstAidTaken&&time(p,world,5,2)&&take(p,Shop.createItem(1))){firstAidTaken=true;GameIO.checkpoint();}
                     if(a==2 && !note && time(p,world,5,2)) {note=true;world.note("Записка на площадке","Папа сказал ждать его возле красной машины.");GameIO.out().println("В коробке записка: «Папа сказал ждать его возле красной машины».");take(p,Shop.createItem(19));mark(location,world,"Детская площадка");}
                 } else if(choice==2) {
                     if(!semen.semen_met)semen.firstMeeting(p,world,scanner);
@@ -54,19 +59,23 @@ final class QuietCourtyard implements Serializable {
                     GameIO.action(2,"Проверить открытый багажник",trunk?"Уже осмотрен":"10 минут",!trunk);
                     GameIO.action(3,"Вскрыть закрытый багажник",lockedTrunk?"Уже обыскан":"Нужен лом · 10 минут",!lockedTrunk && location.hasCrowbar(p));
                     if(note)GameIO.action(4,"Осмотреть красную машину",redCar?"Уже осмотрена":"10 минут",!redCar);
-                    GameIO.action(5,semen.semen_trust_lost?"Осмотреть синюю машину":"Поговорить с Семёном",semen.canApproach()?"Старая синяя машина":"Семён просит вернуться позже",semen.canApproach());
+                    if(!world.homeSurvivors().atHome(HomeSurvivors.SEMEN))GameIO.action(5,semen.semen_trust_lost?"Осмотреть синюю машину":"Поговорить с Семёном",semen.heartResting(world)?"Семён отдыхает. Приходите через сутки":semen.canApproach()?"Старая синяя машина":"Семён просит вернуться позже",semen.canApproach()&&!semen.heartResting(world));
                     if(semen.rewardAvailable())GameIO.action(6,"Забрать припасы Семёна","Оставлены в багажнике");
                     if(semen.bonusAvailable())GameIO.action(7,"Проверить ящик за красной машиной","Подсказка Семёна");
-                    GameIO.action(8,"Разговор по душам",SemenHeartTalk.hint(semen,world),SemenHeartTalk.available(semen,world));
+                    if(!world.homeSurvivors().atHome(HomeSurvivors.SEMEN)){
+                        GameIO.action(8,"Разговор по душам",SemenHeartTalk.hint(semen,world),SemenHeartTalk.available(semen,world));
+                        if(semen.semen_story_completed&&!semen.semen_trust_lost && semen.heartStage>=5)GameIO.action(9,"Предложить Семёну пойти вместе домой");
+                    }
                     GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
                     if(a==1&&!car&&time(p,world,10,2)&&take(p,new Food("Бутылка минеральной воды","Чистая питьевая вода",1,4,0))){car=true;mark(location,world,"Припаркованные автомобили");}
                     if(a==2&&!trunk&&time(p,world,10,2)&&take(p,Shop.createItem(48))){trunk=true;mark(location,world,"Припаркованные автомобили");}
                     if(a==3&&!lockedTrunk&&location.hasCrowbar(p)&&time(p,world,10,3)&&take(p,Shop.createItem(19))){lockedTrunk=true;mark(location,world,"Припаркованные автомобили");if(!BreakIn.attack(p,scanner,random))return;}
                     if(a==4&&note&&!redCar&&time(p,world,10,2)){redCar=true;world.note("Красная машина","Машина пуста. На сиденье пакет с детской курткой и записка: «Не жди меня возле дома».");GameIO.out().println("На сиденье детская куртка и записка: «Не жди меня возле дома».");mark(location,world,"Припаркованные автомобили");}
-                    if(a==5&&semen.canApproach())semen.talk(p,world,scanner);
+                    if(a==5&&!world.homeSurvivors().atHome(HomeSurvivors.SEMEN)&&semen.canApproach())semen.talk(p,world,scanner);
                     if(a==6&&semen.rewardAvailable())semen.rewards(p,scanner);
                     if(a==7&&semen.bonusAvailable()&&time(p,world,5,1))semen.bonus(p,world);
-                    if(a==8)SemenHeartTalk.open(semen,world,scanner);
+                    if(a==8&&!world.homeSurvivors().atHome(HomeSurvivors.SEMEN))SemenHeartTalk.open(semen,world,scanner);
+                    if(a==9&&!world.homeSurvivors().atHome(HomeSurvivors.SEMEN)&&semen.semen_story_completed&&!semen.semen_trust_lost&&semen.heartStage>=5)world.homeSurvivors().invite(HomeSurvivors.SEMEN,world,scanner);
                 } else if(choice==3) {
                     GameIO.menu("Мусорные контейнеры","Коробки и сломанная мебель. Под тяжёлым обломком двери виднеется металлический рычаг.");
                     GameIO.action(1,"Осмотреть коробки",boxes?"Уже осмотрены":"5 минут",!boxes);

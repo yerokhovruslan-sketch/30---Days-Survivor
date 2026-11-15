@@ -18,6 +18,8 @@ class SurvivorInfo implements java.io.Serializable {
     private int sleepiness = 0;
     private int noise = 0;
     private int campaignDifficulty;
+    // Hundredths survive saves; old saves default to zero.
+    private int hungerRemainder, sleepinessRemainder;
     int difficulty(){return campaignDifficulty==0?2:campaignDifficulty;}
     void chooseDifficulty(int level){if(level<1 || level>3 || campaignDifficulty!=0)throw new IllegalStateException("Сложность уже выбрана");campaignDifficulty=level;}
 
@@ -28,10 +30,10 @@ class SurvivorInfo implements java.io.Serializable {
     void settleAtHome() { noise=0; }
     public int getSleepiness() { return sleepiness; }
     public boolean canSleep() { return isAlive() && sleepiness > 40; }
-    public void increaseSleepiness(int amount) { sleepiness = Math.min(100, sleepiness + Difficulty.needs(amount,difficulty())); }
+    public void increaseSleepiness(int amount) { if(amount>0){int total=sleepinessRemainder+amount*Difficulty.needsPercent(difficulty());sleepiness=Math.min(100,sleepiness+total/100);sleepinessRemainder=sleepiness==100?0:total%100;} }
     public void sleep() {
         if (!canSleep()) return;
-        sleepiness = 0;
+        sleepiness = 0;sleepinessRemainder=0;
         increaseHunger(10);
         restoreStamina(100);
     }
@@ -39,8 +41,8 @@ class SurvivorInfo implements java.io.Serializable {
     public int getStamina() { return stamina; }
     public int getMaxStamina() { return maxStamina; }
     public int getHunger() { return hunger; }
-    public void increaseHunger(int amount) { hunger = Math.min(100, hunger + Difficulty.needs(amount,difficulty())); }
-    public void eat(int nutrition) { if (isAlive()) hunger = Math.max(0, hunger - Math.max(0, nutrition)); }
+    public void increaseHunger(int amount) { if(amount>0){int total=hungerRemainder+amount*Difficulty.needsPercent(difficulty());hunger=Math.min(100,hunger+total/100);hungerRemainder=hunger==100?0:total%100;} }
+    public void eat(int nutrition) { if (isAlive()) {hunger = Math.max(0, hunger - Math.max(0, nutrition));if(hunger==0)hungerRemainder=0;} }
     public int getDamagePercent() { return Math.max(25, 100 - hunger / 2 - sleepiness / 4); }
     public int getAccuracyPenalty() { return hunger / 3 + sleepiness / 4; }
     public int getStunChance() { return Math.min(45, hunger / 4 + sleepiness / 5); }
@@ -179,7 +181,7 @@ class Fighter extends SurvivorInfo {
         poisoningMinutes=Math.max(0,poisoningMinutes-minutes);
         for (BodyInjury wound : injuries().values()) {
             if (!wound.treated || wound.bleeding > 0 || wound.trauma <= 0) continue;
-            long total = (long) wound.recoveryMinutes + minutes;
+            long total = (long) wound.recoveryMinutes + (difficulty()==1 ? minutes*3L/2 : minutes);
             int restored = (int)Math.min(wound.trauma, total / 60);
             wound.trauma -= restored;
             wound.recoveryMinutes = wound.trauma == 0 ? 0 : (int)(total % 60);
@@ -363,7 +365,7 @@ class Fighter extends SurvivorInfo {
         wound.bleeding = Math.max(0, wound.bleeding - (bandage ? 3 : 5));
         wound.treated = true;
         wound.recoveryMinutes = 0;
-        return part.label + ": кровотечение " + (wound.bleeding == 0 ? "остановлено; рана заживает: 1 единица в игровой час." : "ослаблено; для заживления остановите кровь полностью.");
+        return part.label + ": кровотечение " + (wound.bleeding == 0 ? (difficulty()==1?"остановлено; рана заживает быстрее.":"остановлено; рана заживает: 1 единица в игровой час.") : "ослаблено; для заживления остановите кровь полностью.");
     }
 
     public Fighter(String name, String description, int health) {
@@ -967,6 +969,7 @@ class Survivor {
         if(world.getNumber(location)==16){PoliceArchive.enter(player,world.getStories(),scanner,random);return;}
         if (location.isDepleted()) return;
         world.getStories().markSearched(world.getNumber(location));
+        world.getStories().lastLine().searchClue(world.getNumber(location),point,world.getStories());
         world.getStories().findArchiveKey(player,world.getNumber(location));
         List<ItemInfo> chips=world.getStories().guaranteedChips(world.getNumber(location));
         if(!chips.isEmpty()) {
@@ -1337,51 +1340,34 @@ class Survivor {
     public static void main(String[] args) throws InterruptedException {
         Scanner scanner = GameIO.scanner();
         GameSave loaded = null;
-        if (GameSave.exists(GameIO.saveFile())) {
-            while (true) {
-                GameIO.menu("SURVIVOR", "Продолжить путь Джона или начать заново?");
-                GameIO.action(1, "Продолжить сохранённую игру");
-                GameIO.action(2, "Новая игра", "Предыдущее сохранение будет заменено при следующем сохранении");
-                GameIO.action(0, "Выход");
-                if (!scanner.hasNext()) return;
-                if (!scanner.hasNextInt()) { scanner.next(); continue; }
-                int start = scanner.nextInt();
-                if (start == 0) return;
-                if (start == 2) break;
-                if (start != 1) { GameIO.out().println("Выберите 1, 2 или 0."); continue; }
-                try {
-                    loaded = GameSave.load(GameIO.saveFile());
-                    if (!loaded.player.isAlive()) {
-                        GameIO.out().println("Этот выживший погиб. Начните новую игру или выйдите.");
-                        loaded = null;
-                        continue;
-                    }
-                    GameIO.sound(GameSound.SAVE);GameIO.out().println("Прогресс загружен: John");
-                    break;
-                } catch (java.io.IOException e) {
-                    GameIO.out().println("Не удалось загрузить игру: " + e.getMessage());
-                }
-            }
+        while(true){
+            boolean available=!SaveSlots.all(GameIO.saveFile()).isEmpty();
+            GameIO.menu("SURVIVOR","");GameIO.scene("opening_start");
+            GameIO.action(1,"Новая игра");GameIO.action(2,"Продолжить","Последнее сохранение",available);GameIO.action(3,"Загрузить","Выбрать сохранение",available);
+            int start=SurvivalSystems.choice(scanner);
+            if(start==1){try{SaveSlots.snapshot(GameIO.saveFile());}catch(java.io.IOException e){GameIO.menu("Не удалось сохранить прежний прогресс",e.getMessage());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);continue;}break;}
+            if(start==2&&available){try{loaded=SaveSlots.latest(GameIO.saveFile());}catch(java.io.IOException e){GameIO.menu("Не удалось загрузить",e.getMessage());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);continue;}}
+            if(start==3&&available)loaded=SaveSlots.choose(GameIO.saveFile(),scanner);
+            if(loaded!=null&&loaded.player.isAlive())break;loaded=null;
         }
         SurvivorInfo selectedSurvivor = loaded == null ? new Fighter("John", "Боец", 100) : asJohn(loaded.player);
         if(loaded==null) {
             selectedSurvivor.chooseDifficulty(Difficulty.choose(scanner));
             Fighter beginner=(Fighter)selectedSurvivor;
-            beginner.addItem(Shop.createItem(16));beginner.addItem(Shop.createItem(16));beginner.addItem(Shop.createItem(1));
         }
-        if (loaded == null) GameIO.out().println("Ты — Джон. Труба есть, планов нет. Добро пожаловать в конец света.");
         boolean running = true;
         int balance = loaded == null ? 0 : loaded.balance;
         Locations locations = loaded == null ? new Locations() : loaded.locations;
-        if(loaded==null){GameIO.mainMenu(selectedSurvivor,balance,locations);locations.getStories().radioOpening((Fighter)selectedSurvivor,scanner);GameIO.menu("","");}
+        if(loaded!=null && locations.getStories().homeSurvivors().ownLandEnding){locations.getStories().homeSurvivors().ending(scanner);return;}
+        if(loaded==null){if(!OpeningChapter.play((Fighter)selectedSurvivor,locations,scanner,ThreadLocalRandom.current()))return;GameIO.mainMenu(selectedSurvivor,balance,locations);locations.getStories().radioOpening((Fighter)selectedSurvivor,scanner);GameIO.menu("","");}
         while (running) {
             GameIO.mainMenu(selectedSurvivor, balance, locations);
 
             int action1 = scanner.nextInt();
             if (selectedSurvivor.difficulty() == 3) {
-                if (action1 == 0) { GameIO.out().println("Игра завершена без сохранения."); break; }
+                if (action1 == 0) { GameIO.checkpoint(); GameIO.out().println("Игра сохранена: последняя попытка."); break; }
                 if (action1 == 11 || action1 == 12) {
-                    GameIO.out().println("На сложности «Последний шанс» сохранение и загрузка недоступны.");
+                    GameIO.out().println("На сложности «Последний шанс» доступны только автоматическое сохранение и продолжение последней попытки.");
                     continue;
                 }
             }
@@ -1414,7 +1400,8 @@ class Survivor {
                         if(!selectedSurvivor.isAlive()){running=false;continue;}
                         if(!cleared){travel(selectedSurvivor,"Возвращение после отступления",5);continue;}
                     }
-                    if (!destination.prepareForVisit((Fighter) selectedSurvivor, locations.getStories(), scanner, ThreadLocalRandom.current())) {
+                    int entryNumber=locations.getNumber(destination);
+                    if (entryNumber!=42 && entryNumber!=43 && !(entryNumber==47 && locations.getStories().lastLine().eastGateOpen) && !destination.prepareForVisit((Fighter) selectedSurvivor, locations.getStories(), scanner, ThreadLocalRandom.current())) {
                         travel(selectedSurvivor, "Возвращение от входа", 5);
                         continue;
                     }
@@ -1422,7 +1409,24 @@ class Survivor {
                     locations.getStories().residential().onVisit(locations.getNumber(destination),locations.getStories(),(Fighter)selectedSurvivor);
 
                     int locationNumber = locations.getNumber(destination);
+                    if(locationNumber==47 && locations.getStories().lastLine().eastGateOpen){
+                        boolean evacuated=locations.getStories().warehouseFinale().visit((Fighter)selectedSurvivor,locations.getStories(),scanner);
+                        GameIO.checkpoint();
+                        if(!selectedSurvivor.isAlive()){running=false;continue;}
+                        if(evacuated){running=false;continue;}
+                        travel(selectedSurvivor,"Возвращение домой",5);continue;
+                    }
+                    if(locationNumber==42 || locationNumber==43){
+                        boolean ordinary=locations.getStories().lastLine().visit((Fighter)selectedSurvivor,locations,locationNumber,locations.getStories(),scanner,ThreadLocalRandom.current());
+                        GameIO.checkpoint();
+                        if(!selectedSurvivor.isAlive()){running=false;continue;}
+                        if(!ordinary){travel(selectedSurvivor,"Возвращение домой",5);continue;}
+                    }
                     if(RouteAfterArchive.handles(locationNumber)){
+                        if(!returnedToBattle && !ExplorationEncounters.tryEncounter((Fighter)selectedSurvivor,locations,destination,scanner,ThreadLocalRandom.current())){
+                            if(!selectedSurvivor.isAlive()){running=false;continue;}
+                            travel(selectedSurvivor,"Возвращение после встречи",5);continue;
+                        }
                         WorldStories story=locations.getStories();
                         story.residential().aborted=false;
                         RouteAfterArchive route=story.routeAfterArchive();
@@ -1659,10 +1663,12 @@ class Survivor {
                 int healed = ShelterUpgrades.sleep((Fighter) selectedSurvivor, locations.getStories());
                 if (healed < 0) GameIO.out().println("Спать можно только при сонливости выше 40. Сейчас: " + selectedSurvivor.getSleepiness() + "/100.");
                 else GameIO.out().println("Сон 8 часов. Обработанные раны без кровотечения заживают. Сонливость: 0, выносливость восстановлена, голод +10.");
+            } else if (action1 == 18) {
+                locations.getStories().homeSurvivors().menu(locations.getStories(),scanner);
             } else if (action1 == 17) {
-                if (selectedSurvivor instanceof Fighter) Shelter.menu((Fighter) selectedSurvivor, scanner);
+                if (selectedSurvivor instanceof Fighter && Shelter.menu((Fighter) selectedSurvivor, scanner))running=false;
             } else if (action1 == 16) {
-                locations.getStories().showJournal(scanner);
+                locations.getStories().showJournal(scanner, (Fighter) selectedSurvivor);
             } else if (action1 >= 13 && action1 <= 15) {
                 if (!(selectedSurvivor instanceof Fighter)) { GameIO.out().println("Нужен боец с инвентарём."); continue; }
                 Fighter fighter = (Fighter) selectedSurvivor;
@@ -1672,6 +1678,7 @@ class Survivor {
             } else if (action1 == 11 || action1 == 0) {
                 try {
                     GameSave.save(GameIO.saveFile(), selectedSurvivor, balance, locations);
+                    if(action1==11)SaveSlots.snapshot(GameIO.saveFile());
                     GameIO.sound(GameSound.SAVE);
                     GameIO.out().println("Игра сохранена: " + "survivor-save.dat");
                     if (action1 == 0) running = false;
@@ -1679,8 +1686,8 @@ class Survivor {
                     GameIO.out().println("Не удалось сохранить игру: " + e.getMessage());
                 }
             } else if (action1 == 12) {
-                try {
-                    GameSave state = GameSave.load(GameIO.saveFile());
+                    GameSave state = SaveSlots.choose(GameIO.saveFile(),scanner);
+                    if(state==null)continue;
                     if (!state.player.isAlive()) {
                         GameIO.out().println("В сохранении персонаж погиб.");
                         continue;
@@ -1689,9 +1696,6 @@ class Survivor {
                     balance = state.balance;
                     locations = state.locations;
                     GameIO.sound(GameSound.SAVE);GameIO.out().println("Игра загружена.");
-                } catch (java.io.IOException e) {
-                    GameIO.out().println("Не удалось загрузить игру: " + e.getMessage());
-                }
             } else {
                 GameIO.out().println("Неверный ввод. Попробуйте снова.");
             }

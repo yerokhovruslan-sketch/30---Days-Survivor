@@ -52,7 +52,7 @@ final class ShelterUpgrades implements Serializable {
             signalStage=2;GameIO.checkpoint();
         }
         if(signalStage==2) {
-            GameIO.menu("После сигнала", "Военный склад. Теперь есть куда идти. Только кто знает, когда записали это сообщение.");
+            GameIO.menu("После сигнала", "Военный склад. Теперь есть куда идти. Только кто знает, когда записали это сообщение. Среди помех слышно предупреждение: «Не приближайтесь к ограждению после наступления темноты».");
             GameIO.scene("radio_thought");GameIO.action(1,"Продолжить");
             if(SurvivalSystems.choice(scanner)!=1)return;
             signalStage=0;clock.recordRadioSignal();GameIO.checkpoint();

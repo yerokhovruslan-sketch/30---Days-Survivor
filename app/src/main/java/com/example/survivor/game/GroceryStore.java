@@ -36,13 +36,13 @@ final class GroceryStore implements Serializable {
             GameIO.point(2,"Кассовая зона","Ящики, записи и шкафчик администратора",cashTaken&&recordsRead&&journalRead);
             GameIO.point(3,"Склад продуктов",storageCleared?"Заражённый побеждён":"Дверь закрыта и завалена стеллажом",storageHint&&storageCleared&&tin1&&tin2);
             GameIO.point(4,"Холодильная комната","Электричества давно нет",fridgeNote&&fridgeFood&&fridgeDrink);
-            if(researched || stories.viktor>0)GameIO.action(5,"Подсобка заведующего","Из-за двери слышен осторожный голос");
+            if((researched || stories.viktor>0)&&!world.homeSurvivors().atHome(HomeSurvivors.VIKTOR))GameIO.action(5,"Подсобка заведующего","Из-за двери слышен осторожный голос");
             if(hiddenFound || stories.basementKnown)GameIO.action(6,"Скрытый подвал",stories.basementLoot?"Уже обыскан":"За холодильным оборудованием",!stories.basementLoot);
             GameIO.action(7,"Передохнуть","20 минут · восстановить силы");
             GameIO.action(0,"Вернуться домой");
             int section=SurvivalSystems.choice(scanner);if(section==0)return balance;
             if(section==7){Survivor.rest(p,30);continue;}
-            if(section==5 && (researched || stories.viktor>0)){stories.visitShopkeeper(p,world,scanner,random);if(stories.aborted)return balance;continue;}
+            if(section==5 && (researched || stories.viktor>0)&&!world.homeSurvivors().atHome(HomeSurvivors.VIKTOR)){stories.visitShopkeeper(p,world,scanner,random);if(stories.aborted)return balance;continue;}
             if(section<1 || section>6 || section==6 && ((!hiddenFound && !stories.basementKnown) || stories.basementLoot))continue;
             while(p.isAlive()) {
                 if(section==1) {

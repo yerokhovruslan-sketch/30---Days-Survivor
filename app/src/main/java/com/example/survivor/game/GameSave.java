@@ -9,8 +9,6 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
     static boolean exists(File target) { return target.isFile() || new File(target.getPath() + ".bak").isFile(); }
 
     static synchronized void save(File target, SurvivorInfo player, int balance, Locations locations) throws IOException {
-        if (player != null && player.difficulty() == 3)
-            throw new IOException("На сложности «Последний шанс» сохранения недоступны.");
         GameSave state = new GameSave(player, balance, locations);
         state.validate();
         File temporary = new File(target.getPath() + ".tmp");
@@ -46,7 +44,7 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
         Set<String> allowed = new HashSet<>(Arrays.asList("GameSave", "SurvivorInfo", "Fighter", "Medic", "Engineer",
                 "Locations", "Location", "Location$SearchPoint", "LocationState", "LootProfile",
                 "BodyPart", "BodyInjury", "ItemInfo", "Food", "WildFood", "ForestStories", "SemenStory", "MonsterDens", "MonsterDens$Den", "Tools", "Weapons", "MedicalItem",
-                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "RouteAfterArchive", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor"));
+                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "RouteAfterArchive", "LastLine", "WarehouseFinale", "HomeSurvivors", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor"));
         Set<String> standard = new HashSet<>(Arrays.asList("java.lang.Enum", "java.lang.String", "java.lang.Object",
                 "java.lang.Integer", "java.lang.Number", "java.util.ArrayList", "java.util.HashSet", "java.util.HashMap",
                 "java.util.EnumMap", "java.util.IdentityHashMap"));
@@ -68,8 +66,6 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
             if (!(value instanceof GameSave)) throw new IOException("Это не сохранение игры.");
             GameSave state = (GameSave) value;
             state.validate();
-            if (state.player.difficulty() == 3)
-                throw new IOException("На сложности «Последний шанс» загрузка недоступна. Начните новую игру.");
             return state;
         } catch (ClassNotFoundException | RuntimeException error) {
             throw new IOException("Сохранение повреждено или несовместимо.", error);

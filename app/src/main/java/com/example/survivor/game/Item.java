@@ -335,6 +335,9 @@ class Item{
         items.add(Crafting.component(Crafting.METAL));items.add(Crafting.component(Crafting.WOOD));
         for(AmmoType type:AmmoType.values())if(!Crafting.casing(type).isEmpty())items.add(Crafting.component(Crafting.casing(type)));
         items.add(new Tools("Запчасти", "Детали для ремонта оружия и брони", 1, 12));
+        items.add(new Tools(LastLine.BLOCK,"Контактный блок резервного контура",3,85));
+        items.add(new Tools(LastLine.FUSE,"Исправный предохранитель",2,35));
+        items.add(new Tools(LastLine.FUEL,"Топливо для резервного генератора",2,45));
         items.add(new Tools("Плотная ткань", "Материал для улучшения кровати в убежище", 1, 8));
         items.add(new Tools("Набор инструментов", "Для ремонта нужен этот набор или подходящий ручной инструмент", 2, 35));
 

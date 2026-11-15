@@ -3,7 +3,7 @@ package com.example.survivor.game;
 import java.util.*;
 
 final class Shop {
-    static final int LAST_PRODUCT = 61;
+    static final int LAST_PRODUCT = 64;
     static ItemInfo createItem(int number) {
         ItemInfo boughtItem;
         switch (number) {
@@ -62,6 +62,9 @@ final class Shop {
             case 59: boughtItem=Crafting.component(Crafting.KIT);break;
             case 60: boughtItem=Crafting.component(Crafting.METAL);break;
             case 61: boughtItem=Crafting.component(Crafting.WOOD);break;
+            case 62: boughtItem=new Tools(LastLine.BLOCK,"Контактный блок резервного контура; пригоден для технического ремонта",3,85);break;
+            case 63: boughtItem=new Tools(LastLine.FUSE,"Исправный предохранитель для резервного щита",2,35);break;
+            case 64: boughtItem=new Tools(LastLine.FUEL,"Топливо для резервного генератора",2,45);break;
             default: return null;
         }
         return boughtItem;

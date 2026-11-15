@@ -23,7 +23,7 @@ final class SemenHeartTalk {
    for(int i=0;i<OPTIONS[stage].length;i++)GameIO.action(i+1,OPTIONS[stage][i]);
    GameIO.action(0,"Продолжить позже");int c=SurvivalSystems.choice(scanner);if(c<1||c>OPTIONS[stage].length)return;
    if(s.heartAnswers==null)s.heartAnswers=new int[5];s.heartAnswers[stage]=c;s.heartStage=stage+1;
-   if(s.heartStage==5)w.note("А ты точно проснулся?","Семён рассказал Джону свои тревожные догадки о сне и звёздах. Он сам не уверен, что они верны.");
+   if(s.heartStage==5){s.heartFinishedAt=w.absoluteMinute()+1;w.note("А ты точно проснулся?","Семён рассказал Джону свои тревожные догадки о сне и звёздах. Он сам не уверен, что они верны.");}
    GameIO.checkpoint();ResidentialStories.pause(TITLES[stage],REPLIES[stage][c-1]+(stage==4?"\n\n"+ENDING:""),scanner);
   }
  }

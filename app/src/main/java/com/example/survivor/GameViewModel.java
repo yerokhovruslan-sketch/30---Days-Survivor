@@ -30,10 +30,38 @@ public final class GameViewModel extends AndroidViewModel {
     private final android.os.Handler effectsHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private GameSession.Frame radioFrame;
     private boolean foreground;
+    private final MutableLiveData<Integer> openingSeconds=new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> openingMillis=new MutableLiveData<>(0);
+    private final OpeningTimerAudio openingAudio;
+    private final OpeningSound openingSound;
+    private final android.os.Handler openingHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private GameSession.Frame timedOpening;
+    private long openingRemaining,openingDeadline;
+    private long openingDuration;
+    private boolean openingRunning;
+    LiveData<Integer> openingSeconds(){return openingSeconds;}
+    LiveData<Integer> openingMillis(){return openingMillis;}
+    private final Runnable openingTick=new Runnable(){@Override public void run(){
+        if(!foreground||timedOpening==null||session==null)return;
+        openingRemaining=Math.max(0,openingDeadline-android.os.SystemClock.uptimeMillis());int seconds=(int)((openingRemaining+999)/1000);
+        openingSeconds.setValue(seconds);openingMillis.setValue((int)openingRemaining);openingAudio.heartbeat(openingRemaining);
+        if(openingRemaining<=0){GameSession.Frame expired=timedOpening;timedOpening=null;openingRunning=false;openingAudio.stop();session.submit(expired.revision,0);return;}
+        openingHandler.postDelayed(this,100);
+    }};
+    private void openingFrame(GameSession.Frame frame){
+        boolean timed=frame.mode==GameSession.Mode.CHOICE&&(frame.menu.scene.equals("opening_door")||frame.menu.scene.equals("opening_wounded"));
+        if(timedOpening!=null&&timed&&timedOpening.revision==frame.revision)return;
+        openingHandler.removeCallbacksAndMessages(null);timedOpening=null;openingRunning=false;openingSeconds.setValue(0);openingAudio.stop();
+        if(timed){timedOpening=frame;openingRemaining=OpeningTiming.duration(frame.menu.scene);openingDuration=openingRemaining;openingMillis.setValue((int)openingRemaining);openingSeconds.setValue((int)(openingRemaining/1000));if(foreground)openingHandler.postDelayed(()->{if(foreground&&timedOpening==frame)resumeOpening();},350);}
+    }
+    private void resumeOpening(){if(timedOpening==null||openingRunning)return;openingRunning=true;openingAudio.start(openingDuration-openingRemaining);openingDeadline=android.os.SystemClock.uptimeMillis()+openingRemaining;openingHandler.removeCallbacks(openingTick);openingHandler.post(openingTick);}
+    private void pauseOpening(){if(timedOpening!=null&&openingRunning)openingRemaining=Math.max(0,openingDeadline-android.os.SystemClock.uptimeMillis());openingRunning=false;openingAudio.pause();openingHandler.removeCallbacksAndMessages(null);}
     String section = "SURVIVOR";
 
     public GameViewModel(@NonNull Application application) {
         super(application);
+        openingAudio = new OpeningTimerAudio(application);
+        openingSound = new OpeningSound(application);
         intro = new IntroSequence(application);
         radio = new RadioPlayback(application);
         music=new AdaptiveMusic(application);
@@ -43,18 +71,20 @@ public final class GameViewModel extends AndroidViewModel {
             while ((line=reader.readLine())!=null) { line=line.replace("\uFEFF", "").trim(); if(!line.isEmpty())lines.add(line); }
             searchNarrative=new SearchNarrative(lines);
         } catch (java.io.IOException ignored) { searchNarrative=new SearchNarrative(java.util.Collections.emptyList()); }
-        if (!Boolean.TRUE.equals(intro.visible.getValue())) restart();
+        intro.visible.setValue(false);
+        restart();
     }
 
     LiveData<GameSession.Frame> frames() { return frames; }
 
     void restart() {
+        openingHandler.removeCallbacksAndMessages(null);timedOpening=null;openingRunning=false;openingSeconds.setValue(0);openingAudio.stop();
         music.restart();
         searchHandler.removeCallbacksAndMessages(null); pendingSearch=null;waitingSearchResult=false;searchScene.setValue(null);
         final int generation=++sessionGeneration;
         effects.clear();effectsHandler.removeCallbacksAndMessages(null);
         if (session != null) session.close();
-        session = new GameSession(getApplication().getFilesDir(), frame->effectsHandler.post(()->{if(generation==sessionGeneration){frames.setValue(frame);if(waitingSearchResult && frame.mode!=GameSession.Mode.BUSY){waitingSearchResult=false;searchScene.setValue(null);}}}));
+        session = new GameSession(getApplication().getFilesDir(), frame->effectsHandler.post(()->{if(generation==sessionGeneration){openingSound.frame(frame);openingFrame(frame);frames.setValue(frame);if(waitingSearchResult && frame.mode!=GameSession.Mode.BUSY){waitingSearchResult=false;searchScene.setValue(null);}}}));
         session.setTravelListener(text->effectsHandler.post(()->{if(generation==sessionGeneration)travelScene.setValue(text);}));
         session.setEffectsListener(sound->effectsHandler.post(()->{
             if(sound==com.example.survivor.game.GameSound.SEARCH && android.os.SystemClock.uptimeMillis()<suppressSearchUntil){suppressSearchUntil=0;return;}
@@ -77,6 +107,7 @@ public final class GameViewModel extends AndroidViewModel {
     }
     void submit(GameSession.Frame frame, int number) {
         if(session==null || pendingSearch!=null || waitingSearchResult)return;
+        if(timedOpening!=null&&timedOpening.revision==frame.revision){openingHandler.removeCallbacksAndMessages(null);timedOpening=null;openingRunning=false;openingSeconds.setValue(0);openingAudio.stop();}
         if(!isSearchAction(frame,number)){session.submit(frame.revision,number);return;}
         pendingSearch=frame;pendingSearchAction=number;searchRemaining=SearchDuration.holdMillis(searchRandom);session.setPaused(true);
         searchScene.setValue(searchNarrative.choose(searchRandom,frame.place,frame.menu.title));effects.play(com.example.survivor.game.GameSound.SEARCH);
@@ -92,13 +123,15 @@ public final class GameViewModel extends AndroidViewModel {
     }
     void resumeMusic() {
         foreground = true;
+        openingSound.foreground(true);
+        resumeOpening();
         if(session!=null)session.setForeground(true);
         if(pendingSearch!=null)scheduleSearch();
         effects.resume();
         music.foreground(true);music.voice(Boolean.TRUE.equals(intro.visible.getValue()) || radio.active());
         if (Boolean.TRUE.equals(intro.visible.getValue())) intro.resume(); else if(radio.active())resumeRadioAfterFade();
     }
-    void pauseMusic() { if(pendingSearch!=null){searchRemaining=Math.max(0,searchDeadline-android.os.SystemClock.uptimeMillis());searchHandler.removeCallbacks(finishSearch);} musicHandler.removeCallbacksAndMessages(null);music.foreground(false);foreground = false;if(session!=null)session.setForeground(false);effects.pause(); intro.pause();radio.pause(); }
+    void pauseMusic() { openingSound.foreground(false);pauseOpening();if(pendingSearch!=null){searchRemaining=Math.max(0,searchDeadline-android.os.SystemClock.uptimeMillis());searchHandler.removeCallbacks(finishSearch);} musicHandler.removeCallbacksAndMessages(null);music.foreground(false);foreground = false;if(session!=null)session.setForeground(false);effects.pause(); intro.pause();radio.pause(); }
     void pauseWorld(boolean value){if(value)effects.pause();else if(foreground)effects.resume();music.paused(value);if(session!=null)session.setPaused(value);}
     void bagSound(){effects.play(com.example.survivor.game.GameSound.BAG);}
     void unavailableSound(){effects.play(com.example.survivor.game.GameSound.ERROR);}
@@ -109,7 +142,7 @@ public final class GameViewModel extends AndroidViewModel {
         boolean wasActive=radio.active();
         if(!wasActive && !frame.menu.scene.isEmpty())effects.clear();
         effects.update(frame,!frame.menu.scene.isEmpty() || Boolean.TRUE.equals(intro.visible.getValue()));
-        music.update(frame);music.voice(!frame.menu.scene.isEmpty() || Boolean.TRUE.equals(intro.visible.getValue()));
+        music.update(frame);music.voice(openingSound.active() || !frame.menu.scene.isEmpty() || Boolean.TRUE.equals(intro.visible.getValue()));
         radio.show(frame);radioFrame=frame;
         if(foreground) {
             if(radio.active())resumeRadioAfterFade();
@@ -127,5 +160,5 @@ public final class GameViewModel extends AndroidViewModel {
         music.voice(false);restart();
     }
 
-    @Override protected void onCleared() { searchHandler.removeCallbacksAndMessages(null);if (session != null) session.close();effectsHandler.removeCallbacksAndMessages(null);effects.close(); intro.close();radio.close();musicHandler.removeCallbacksAndMessages(null);music.close(); }
+    @Override protected void onCleared() { openingHandler.removeCallbacksAndMessages(null);openingAudio.close();openingSound.close();searchHandler.removeCallbacksAndMessages(null);if (session != null) session.close();effectsHandler.removeCallbacksAndMessages(null);effects.close(); intro.close();radio.close();musicHandler.removeCallbacksAndMessages(null);music.close(); }
 }

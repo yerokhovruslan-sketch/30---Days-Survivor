@@ -44,7 +44,7 @@ final class Shelter {
         return true;
     }
 
-    static void menu(Fighter player, Scanner scanner) {
+    static boolean menu(Fighter player, Scanner scanner) {
         while (true) {
             GameIO.player(player);
             GameIO.menu("Убежище · склад", "Вещи на складе не занимают место в рюкзаке. Склад доступен только дома.");
@@ -60,9 +60,16 @@ final class Shelter {
             GameIO.action(4,"Поймать сигнал",player.getUpgrades().signalHint(GameIO.clock()),player.getUpgrades().canListen(GameIO.clock()));
             if(GameIO.clock()!=null && GameIO.clock().semen().heartStage>=5 && GameIO.clock().isNight())
                 GameIO.action(7,"Посмотреть на ночное небо","Вспомнить слова Семёна");
+            if(GameIO.clock()!=null && GameIO.clock().warehouseFinale().registryFound){
+                HomeSurvivors home=GameIO.clock().homeSurvivors();
+                GameIO.action(8,"Связаться с убежищем №6",player.getUpgrades().radio>0?"Проверить связь и узнать об условиях":"Нужна работающая радиостанция",player.getUpgrades().radio>0);
+                if(home.radioConfirmed)GameIO.action(9,"Подготовить дорогу к убежищу №6",home.requirements(player),home.ready(player,GameIO.clock()));
+            }
             GameIO.action(0, "В главное меню");
             int choice = SurvivalSystems.choice(scanner);
-            if (choice == 0) return;
+            if (choice == 0) return false;
+            if(choice==8 && GameIO.clock()!=null)GameIO.clock().homeSurvivors().radio(player,GameIO.clock(),scanner);
+            if(choice==9 && GameIO.clock()!=null && GameIO.clock().homeSurvivors().depart(player,GameIO.clock(),scanner))return true;
             if(choice==7 && GameIO.clock()!=null && GameIO.clock().semen().heartStage>=5 && GameIO.clock().isNight())
                 ResidentialStories.pause("Ночное небо","Звёзды выглядят так же, как вчера.\n\nВпрочем, Джон никогда особенно не разбирался в созвездиях.\n\nИнтересно, зачем он вообще начал обращать на это внимание?",scanner);
             if (choice == 1 || choice == 2) transferMenu(player, scanner, choice == 1);

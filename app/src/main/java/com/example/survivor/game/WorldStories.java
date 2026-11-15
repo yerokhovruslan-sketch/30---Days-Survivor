@@ -22,7 +22,15 @@ final class WorldStories implements Serializable {
     private int minuteOfDay = 480;
     private boolean clockInitialized = true;
     private SemenStory semen;
+    int openingChoice=-1;
+    boolean openingChoiceRecorded,openingFollowupSeen;
     SemenStory semen(){if(semen==null)semen=new SemenStory();return semen;}
+    private LastLine lastLine;
+    LastLine lastLine(){if(lastLine==null)lastLine=new LastLine();return lastLine;}
+    private WarehouseFinale warehouseFinale;
+    WarehouseFinale warehouseFinale(){if(warehouseFinale==null)warehouseFinale=new WarehouseFinale();return warehouseFinale;}
+    private HomeSurvivors homeSurvivors;
+    HomeSurvivors homeSurvivors(){if(homeSurvivors==null)homeSurvivors=new HomeSurvivors();return homeSurvivors;}
     private MonsterDens monsterDens;
     MonsterDens monsterDens(){if(monsterDens==null)monsterDens=new MonsterDens();return monsterDens;}
     private ForestStories forest;
@@ -202,6 +210,7 @@ final class WorldStories implements Serializable {
         long total = (long) minuteOfDay + Math.max(0, minutes);
         day += (int) (total / 1440);
         minuteOfDay = (int) (total % 1440);
+        if(recoveryPlayer!=null)warehouseFinale().announceDeparture(this,recoveryPlayer);
     }
     private int searches;
     private int lastStorySearch = -4;
@@ -218,6 +227,7 @@ final class WorldStories implements Serializable {
     int day() { return day; }
     void recordRadioSignal() {
         String entry="Сигнал «Маяк» записан. Точка сбора — Военный склад. Северный блокпост закрыт.\n"
+                +"Предупреждение передачи: «Не приближайтесь к ограждению после наступления темноты».\n"
                 +"Цель: найти схему резервного прохода в архиве участка и проверить дату сообщения.";
         if(journal.stream().noneMatch(text->text.contains("Сигнал «Маяк» записан.")))journal.add("День "+day+" — Радиостанция\n"+entry);
     }
@@ -365,20 +375,47 @@ final class WorldStories implements Serializable {
         donations.putIfAbsent(currentPlace, day);
         GameIO.out().println("Ты оставляешь припасы на видном месте. Может быть, кто-то ещё вернётся сюда.");
     }
-    void showJournal(Scanner scanner) {
-        if (journal.isEmpty()) { GameIO.out().println("В журнале пока нет чужих историй."); return; }
-        while (true) {
-            GameIO.menu("Журнал историй", "То, что Джон запомнил. Выберите запись для чтения.");
-            for (int i = 0; i < journal.size(); i++) {
-                String[] lines = journal.get(i).split("\n", 3);
-                GameIO.action(i + 1, lines[1], lines[0]);
+    static String[] journalEntry(String entry) {
+        String[] lines=entry.split("\n",3);
+        if(lines.length>=3 && lines[1].length()<=65 && !lines[1].matches(".*[.!?…:]$"))return new String[]{lines[1],lines[0],lines[2]};
+        String header=lines[0]; int separator=header.indexOf(" — ");
+        return new String[]{separator>=0?header.substring(separator+3):header,
+                separator>=0?header.substring(0,separator):"",lines.length>2?lines[1]+"\n"+lines[2]:lines.length>1?lines[1]:""};
+    }
+    List<String> currentTasks(Fighter player) {
+        List<String> tasks=new ArrayList<>(); ShelterUpgrades upgrades=player.getUpgrades();
+        if(upgrades.radio==0)tasks.add("Восстановить радиостанцию в убежище.");
+        else if(!upgrades.signalReceived)tasks.add("Настроить радиостанцию и принять сигнал «Маяк».");
+        else if(!archiveComplete)tasks.add("Найти документы о резервном проходе в полицейском архиве.");
+        else if(lastLine!=null && lastLine.eastGateOpen)tasks.add("Исследовать военный склад через восточный технический проход.");
+        else if(lastLine!=null && lastLine.powerRestored)tasks.add("Проверить восточный технический проход к военному складу.");
+        else if(routeAfterArchive!=null && (routeAfterArchive.cargoFound || routeAfterArchive.gateSeen))tasks.add("Найти способ восстановить электроснабжение резервного прохода к военному складу.");
+        else tasks.add("Разведать резервный маршрут к складу или проверить медицинский экипаж №17.");
+        SemenStory s=semen(); if(s.semen_quest_started&&!s.semen_story_completed&&!s.semen_trust_lost)
+            tasks.add(s.red_scarf_found?"Вернуть красный шарф Семёну.":"Найти красный шарф Семёна в квартире №24 жилого подъезда.");
+        ForestStories f=forest(); if(f.questStarted&&f.andrey==2)
+            tasks.add("Найти зелёный ящик и вернуть его Андрею до дня "+f.deadline+".");
+        return tasks;
+    }
+    void showJournal(Scanner scanner, Fighter player) {
+        while(true){
+            GameIO.menu("Журнал истории", "Задачи и найденные записи.");
+            GameIO.action(1,"Задачи"); GameIO.action(2,"Записки"); GameIO.action(0,"Назад");
+            int section=SurvivalSystems.choice(scanner); if(section==0)return;
+            if(section==1){
+                GameIO.menu("Задачи", "Текущие цели Джона.");
+                for(String task:currentTasks(player))GameIO.card("",task);
+                GameIO.action(0,"Назад"); SurvivalSystems.choice(scanner);
+            } else if(section==2){
+                while(true){
+                    GameIO.menu("Записки",journal.isEmpty()?"Пока нет записей.":"Выберите запись для чтения.");
+                    for(int i=0;i<journal.size();i++){String[] entry=journalEntry(journal.get(i));GameIO.action(i+1,entry[0],entry[1]);}
+                    GameIO.action(0,"Назад"); int choice=SurvivalSystems.choice(scanner); if(choice==0)break;
+                    if(choice<1||choice>journal.size())continue;
+                    String[] entry=journalEntry(journal.get(choice-1));
+                    GameIO.menu(entry[0],entry[1]);GameIO.card("",entry[2]);GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);
+                }
             }
-            GameIO.action(0, "Назад");
-            int choice = SurvivalSystems.choice(scanner);
-            if (choice == 0) return;
-            if (choice < 1 || choice > journal.size()) { GameIO.out().println("Неверный номер."); continue; }
-            String[] lines = journal.get(choice - 1).split("\n", 3);
-            print(new Discovery(0, lines[1], lines[2], java.util.Arrays.asList()));
         }
     }
 

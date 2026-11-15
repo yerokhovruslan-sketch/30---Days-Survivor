@@ -11,6 +11,8 @@ final class SemenStory implements Serializable {
     boolean wardrobeInspected,noteRead,pendingResponse,returnedNote,bonusTaken;
     boolean rewardFood,rewardWater,rewardParts;
     int heartStage;
+    int heartFinishedAt;
+    boolean heartResting(WorldStories w){return heartFinishedAt>0 && w.absoluteMinute() < heartFinishedAt-1+1440;}
     int[] heartAnswers = new int[5];
     int firstReaction,hostileResponses,answer,semenQuestStartDay;
     private transient boolean avoidThisVisit;
@@ -41,6 +43,7 @@ final class SemenStory implements Serializable {
         if(semen_trust_lost){ResidentialStories.pause("Пустая машина","Машина пуста. На стекле: «Если проснёшься раньше меня, не забудь закрыть дверь».",scanner);return;}
         if(!canApproach()){GameIO.out().println("Семён закрыл дверь. Он может согласиться поговорить при следующем посещении двора.");return;}
         if(pendingResponse){response(w,scanner);return;}
+        if(semen_story_completed && heartResting(w)){GameIO.out().println("Семён отдыхает. Приходите через некоторое время.");return;}
         if(semen_story_completed){ResidentialStories.pause("Семён у автомобиля",SemenDialogue.GOOD[Math.floorMod(w.day(),SemenDialogue.GOOD.length)],scanner);return;}
         if(semen_scarf_returned)return;
         if(semen_quest_started){
@@ -80,7 +83,7 @@ final class SemenStory implements Serializable {
         GameIO.action(1,"Может, ты уже проснулся. И это реальность");GameIO.action(2,"Не знаю, что реально. Но шарф сейчас у тебя в руках");GameIO.action(3,"Лена хотела бы, чтобы ты продолжал жить");GameIO.action(4,"Если это сон, почему бы тебе не сделать его лучше?");GameIO.action(5,"Я тоже не знаю, что будет завтра");GameIO.action(6,"Хватит прятаться в машине. Вокруг есть живые люди");GameIO.action(0,"Продолжить позже");int c=SurvivalSystems.choice(scanner);if(c<1||c>6)return;
         answer=c;pendingResponse=false;semen_story_completed=true;
         String reply=SemenDialogue.ANSWERS[c];
-        note(w,"Ответ Семёну",reply+" Семён подсказал: за задним колесом красной машины лежит старый ящик. В багажнике синей машины он оставил Джону небольшие припасы.");
+        w.note("Ответ Семёну",reply+" Семён подсказал: за задним колесом красной машины лежит старый ящик. В багажнике синей машины он оставил Джону небольшие припасы."); GameIO.checkpoint();
         ResidentialStories.pause("Ответ Семёна",reply+"\n\n"+SemenDialogue.REWARD+"\n\n"+SemenDialogue.BONUS,scanner);
     }
     void rewards(Fighter p,Scanner scanner){

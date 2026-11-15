@@ -27,6 +27,7 @@ public class AndreyCampfireTest {
  @Test public void endingDoesNotPreventUnfinishedTopicsAndIsNotRewardedTwice(){
   WorldStories w=new WorldStories();Fighter p=new Fighter("John","",100);ForestStories f=completed(w);f.campfireIntro=true;int before=w.absoluteMinute(),count=p.getInventory().size();
   AndreyCampfire.open(f,p,w,new Scanner("6 4 0"));assertTrue(f.campfireEnded);assertEquals(4,f.campfireFinishChoice);assertEquals(2,w.absoluteMinute()-before);assertFalse(w.journal().stream().anyMatch(x->x.contains("Судьба брата")));
+  assertTrue(f.campfireResting(w));w.advanceMinutes(1440);assertFalse(f.campfireResting(w));before+=1440;
   AndreyCampfire.open(f,p,w,new Scanner("2 5 0 6 2 0"));assertEquals(2,f.campfireTopics);assertEquals(2,f.campfireFinishChoice);assertEquals(6,w.absoluteMinute()-before);assertEquals(count,p.getInventory().size());assertEquals(1,w.journal().stream().filter(x->x.contains("Джон и Андрей поговорили у костра")).count());assertTrue(w.journal().stream().anyMatch(x->x.contains("Судьба брата неизвестна")));
  }
 }

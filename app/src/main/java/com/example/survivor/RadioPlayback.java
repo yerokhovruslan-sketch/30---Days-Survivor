@@ -38,7 +38,7 @@ final class RadioPlayback implements AutoCloseable {
     void blockContinue() {waitingForNext=true;ready=false;emit();}
     void show(GameSession.Frame frame) {
         if(frame.mode==GameSession.Mode.BUSY)return;
-        if(frame.menu.scene.isEmpty()) {if(active())hide();return;}
+        if(frame.menu.scene.isEmpty() || frame.menu.scene.startsWith("opening_")&&!frame.menu.scene.equals("opening_radio")) {if(active())hide();return;}
         if(revision==frame.revision)return;
         release();revision=frame.revision;scene=frame.menu.scene;
         heading=scene.equals("radio_fail")?frame.menu.title:"";text=frame.menu.hint;
@@ -55,14 +55,14 @@ final class RadioPlayback implements AutoCloseable {
     }
     private void start() {
         if(!foreground || !active() || ready || closed || waitingForNext)return;
-        if(scene.equals("radio_audio")) {
+        if(scene.equals("radio_audio") || scene.equals("opening_radio")) {
             if(!focus)return;
             if(recording==null) {
-                recording=MediaPlayer.create(context,R.raw.radio_mayak);
-                if(recording==null) {text=TRANSCRIPT;complete();return;}
+                recording=MediaPlayer.create(context,scene.equals("opening_radio")?R.raw.evacuation_intro:R.raw.radio_mayak);
+                if(recording==null) {if(!scene.equals("opening_radio"))text=TRANSCRIPT;complete();return;}
                 recording.setVolume(.9f,.9f);
                 recording.setOnCompletionListener(player->complete());
-                recording.setOnErrorListener((player,what,extra)-> {text=TRANSCRIPT;recording=null;player.release();complete();return true;});
+                recording.setOnErrorListener((player,what,extra)-> {if(!scene.equals("opening_radio"))text=TRANSCRIPT;recording=null;player.release();complete();return true;});
             }
             if(!recording.isPlaying())recording.start();
         } else if(scene.equals("radio_thought")) {

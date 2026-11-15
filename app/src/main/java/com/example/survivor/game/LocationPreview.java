@@ -33,7 +33,7 @@ final class LocationPreview {
         Location place = world.getLocation(number);
         if(!world.isAvailable(number))return false;
         MonsterDens.Den den=world.getStories().monsterDens().ensure(world,number);
-        return (!place.isDepleted() || den!=null && den.accessible() || RouteAfterArchive.handles(number))
+        return (!place.isDepleted() || number==42 || number==43 || den!=null && den.accessible() || RouteAfterArchive.handles(number))
                 && (!place.isNightOnly() || untilDawn(world.getStories()) > TRAVEL_MINUTES + SearchMode.FAST.minutes);
     }
     static String profile(Location place) {
@@ -74,12 +74,15 @@ final class LocationPreview {
             GameIO.card("Возможная добыча", profile(place) + "\nСодержимое конкретной находки заранее неизвестно.");
             MonsterDens.Den den=clock.monsterDens().ensure(world,number);
             if(den!=null && den.accessible())GameIO.card(den.label(),den.cleared?"Логово зачищено; внутри остались трофеи.":"Опасная группа: "+den.count+" заражённых. Пока логово активно, встречи с заражёнными чаще, случайная добыча может быть ценнее.");
-            if ((number == 6 || number == 8) && !world.isAvailable(number)) GameIO.card("Состояние входа", number == 6 ? "Закрыто. Откройте чердачный люк в жилом подъезде." : "Закрыто. Откройте вход в школу со школьного двора.");
+            if(number==43){clock.lastLine().migrate(world);GameIO.card("Состояние территории",clock.lastLine().raidersDefeated?"Основной пост рейдеров зачищен; проход к оборудованию открыт.":"Главный въезд контролируют вооружённые рейдеры. Через очистные сооружения может существовать обход.");}
+            else if(number==42)GameIO.card("Состояние входа","Проход на сооружения доступен. Технический обход проходит через заражённые мостки и ограждение.");
+            else if(number==47 && clock.lastLine().eastGateOpen)GameIO.card("Состояние входа","Восточные технические ворота открыты. Опасность внутри неизвестна.");
+            else if ((number == 6 || number == 8) && !world.isAvailable(number)) GameIO.card("Состояние входа", number == 6 ? "Закрыто. Откройте чердачный люк в жилом подъезде." : "Закрыто. Откройте вход в школу со школьного двора.");
             else GameIO.illustratedCard("", "", "location_state:" + place.getState().name());
             String reason = "Открыть маршрут";
             if (!world.isAvailable(number)) reason = place.isNightOnly() && !clock.isNight() ? "Днём проход закрыт"
                     : number == 6 ? "Откройте чердачный люк в жилом подъезде" : number == 8 ? "Откройте вход в школу со школьного двора" : "Сначала посетите «" + world.getLocation(place.getRequiredLocation()).getName() + "»";
-            else if (place.isDepleted() && (den==null || !den.accessible())) reason = "Запасы исчерпаны";
+            else if (place.isDepleted() && number!=42 && number!=43 && !RouteAfterArchive.handles(number) && (den==null || !den.accessible())) reason = "Запасы исчерпаны";
             else if (place.isNightOnly() && !canDepart(world, number)) reason = "Не успеете дойти и закончить даже быстрый поиск до рассвета";
             if (canDepart(world, number)) GameIO.illustratedAction(1, "Выйти на вылазку", reason, "location_depart");
             else GameIO.action(1, "Выйти на вылазку", reason, false);

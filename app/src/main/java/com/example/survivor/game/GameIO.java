@@ -36,8 +36,10 @@ final class GameIO {
     static void board(BattleBoard board) { if (CURRENT.get() != null) CURRENT.get().board(board); }
     static void scene(String scene) { if(CURRENT.get()!=null)CURRENT.get().scene(scene); }
     static void checkpoint() { if(CURRENT.get()!=null)CURRENT.get().checkpoint(); }
+    static void preparePrologue(SurvivorInfo p,Locations l){if(CURRENT.get()!=null)CURRENT.get().preparePrologue(p,l);}
+    static void finishPrologue(){if(CURRENT.get()!=null)CURRENT.get().finishPrologue();}
     static void musicCue(String cue){if(CURRENT.get()!=null)CURRENT.get().musicCue(cue);}
-    static void hurt(SurvivorInfo player){if(CURRENT.get()!=null && CURRENT.get().isCurrentPlayer(player))sound(GameSound.HURT);}
+    static void hurt(SurvivorInfo player){if(CURRENT.get()!=null)CURRENT.get().playerHurt(player); }
     static GameSound footsteps(){return footsteps(clock()==null?0:clock().currentPlace());}
     static GameSound footsteps(int place){return place==2 || place>=19 && place<=32?GameSound.EARTH_STEPS:GameSound.CONCRETE_STEPS;}
     static void travelTransition(String text){if(CURRENT.get()!=null)CURRENT.get().travelTransition(text);}

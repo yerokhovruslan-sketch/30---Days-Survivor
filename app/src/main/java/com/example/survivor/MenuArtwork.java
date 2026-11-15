@@ -32,6 +32,7 @@ final class MenuArtwork {
         if(id==R.id.action_armor)return R.drawable.menu_art_armor;
         if(id==R.id.action_journal)return R.drawable.menu_art_journal;
         if(id==R.id.action_shelter)return R.drawable.menu_art_shelter;
+        if(id==R.id.action_survivors)return R.drawable.menu_art_survivors;
         return 0;
     }
     static int route(String key) {
@@ -90,7 +91,11 @@ final class MenuArtwork {
     static void apply(Button button,int resource) {
         if(resource==0)return;
         Bitmap image=cache.get(resource);
-        if(image==null) {image=BitmapFactory.decodeResource(button.getResources(),resource);cache.put(resource,image);}
+        if(image==null) {
+            image=BitmapFactory.decodeResource(button.getResources(),resource);
+            if(image==null){android.util.Log.e("SurvivorArtwork","Cannot decode menu artwork: "+button.getResources().getResourceEntryName(resource));return;}
+            cache.put(resource,image);
+        }
         float density=button.getResources().getDisplayMetrics().density;
         GradientDrawable mask=new GradientDrawable();mask.setColor(Color.WHITE);mask.setCornerRadius(7*density);
         float focus=resource==R.drawable.menu_art_equipment || resource==R.drawable.menu_art_armor ? .96f

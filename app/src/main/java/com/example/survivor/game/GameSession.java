@@ -102,6 +102,9 @@ public final class GameSession implements AutoCloseable {
     private volatile boolean closed;
     private boolean atMain;
     boolean atHome;
+    private boolean prologue;
+    void preparePrologue(SurvivorInfo p,Locations l){player=p;world=l;balance=0;atMain=false;atHome=false;prologue=true;}
+    void finishPrologue(){prologue=false;}
     private long revision;
     private String pendingInput = "";
     private SurvivorInfo player;
@@ -214,9 +217,21 @@ public final class GameSession implements AutoCloseable {
     void board(BattleBoard board) { menu.board = board; }
     void scene(String scene) {menu.scene=scene;}
     void checkpoint() {
-        if(world==null || player==null || !player.isAlive() || player.difficulty()==3)return;
+        if(prologue || world==null || player==null || !player.isAlive())return;
         try {GameSave.save(saveFile,player,balance,world);}
         catch(IOException e) {output.println("Не удалось сохранить попытку приёма: "+e.getMessage());}
+    }
+
+    void playerHurt(SurvivorInfo injured) {
+        if(injured!=player)return;
+        sound(GameSound.HURT);
+        if(!prologue && injured.difficulty()==3 && !injured.isAlive()) {
+            try { if(GameSave.exists(saveFile) && GameSave.load(saveFile).player.difficulty()==3){
+                java.nio.file.Files.deleteIfExists(saveFile.toPath());
+                java.nio.file.Files.deleteIfExists(new File(saveFile.getPath()+".bak").toPath());
+                java.nio.file.Files.deleteIfExists(new File(saveFile.getPath()+".tmp").toPath());
+            }} catch(IOException e){output.println("Не удалось завершить сохранённую попытку: "+e.getMessage());}
+        }
     }
 
     private int read(CharBuffer target) throws IOException {
@@ -252,7 +267,7 @@ public final class GameSession implements AutoCloseable {
             if (lastWaiting.quantity) {
                 if (number < 0 || number > lastWaiting.menu.maxQuantity) return false;
             } else if (lastWaiting.choices.stream().noneMatch(choice -> choice.number == number && choice.enabled)) return false;
-        } else if (number < 0 || number > 17) return false;
+        } else if (number < 0 || number > 18) return false;
         waiting = false;
         publish(Mode.BUSY);
         return input.offer(number);

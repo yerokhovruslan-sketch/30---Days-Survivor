@@ -21,8 +21,11 @@ class HostileSurvivor extends CombatEnemy {
     }
 
     HostileSurvivor(int number, boolean raider, Random random) {
-        super((raider ? "Рейдер " : "Бродяга ") + number,
-                raider ? "Бронированный налётчик" : "Враждебный бродяга", raider ? 160 : 55);
+        this(number,raider,random,false);
+    }
+    HostileSurvivor(int number, boolean raider, Random random, boolean military) {
+        super((military ? "Военный " : raider ? "Рейдер " : "Бродяга ") + number,
+                military ? "Вооружённый военнослужащий" : raider ? "Бронированный налётчик" : "Враждебный бродяга", raider ? 160 : 55);
         this.raider = raider;
         WeaponStyle style = raider ? (random.nextBoolean() ? WeaponStyle.SHOTGUN : WeaponStyle.REVOLVER)
                 : (random.nextBoolean() ? WeaponStyle.CLUB : WeaponStyle.KNIFE);

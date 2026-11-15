@@ -150,8 +150,10 @@ public class WorldStoriesTest {
         check(location.getRemainingSearches() == location.getSearchCapacity() - 2, "Ordinary search still works");
         WorldStories reward = new WorldStories();
         check(pick(reward, 1, 4).items().get(0) instanceof Food, "Backpack scene offers actual food");
-        stories.showJournal(new Scanner("1 0"));
-        check(stories.journal().size() == 1, "Reading journal does not duplicate entries");
+        stories.note("Обычная заметка", "Текст заметки");
+        check(WorldStories.journalEntry("День 1 — Заголовок\nТекст")[2].equals("Текст"), "Two-line entries are readable");
+        stories.showJournal(new Scanner("2 1 0 2 0 0 0"), player);
+        check(stories.journal().size() == 2, "Reading journal does not duplicate entries");
     }
     @org.junit.Test public void originalRegression() throws Exception { java.nio.file.Files.createDirectories(java.nio.file.Path.of(".build")); main(new String[0]); }
     public static void main(String[] args) throws Exception {

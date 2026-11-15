@@ -632,6 +632,7 @@ class Locations implements java.io.Serializable {
         ensureDetailedPoints();
         if (number < 1 || number > locations.size()) return false;
 
+        if (number == 47 && getStories().lastLine().eastGateOpen) return true;
         if (number == 6) return visited.contains(6) || getStories().apartment().hatchOpen();
         if (number == 7) return visited.contains(7) || visited.contains(6) || visited.contains(5);
         if (number == 8) return visited.contains(8) || getStories().schoolyard().schoolEntranceOpen();
@@ -707,8 +708,12 @@ class Locations implements java.io.Serializable {
                 Location place=getLocation(number);
                 boolean available=isAvailable(number), seen=isVisited(number);
                 if(!available&&!seen)continue;
+                String mapState=place.getStateLabel();
+                if(number==42)mapState="Вход доступен";
+                if(number==43){getStories().lastLine().migrate(this);mapState=getStories().lastLine().raidersDefeated?"Пост рейдеров зачищен":"Главный въезд под контролем рейдеров";}
+                if(number==47 && getStories().lastLine().eastGateOpen)mapState="Восточный проход открыт";
                 String detail=(available?"Доступна":"Сейчас закрыта")+" · "+(seen?"Посещена":"Не посещена")
-                    +"\n"+place.getStateLabel()+" · "+place.getSuppliesStatus();
+                    +"\n"+mapState+" · "+place.getSuppliesStatus();
                 if(place.isNightOnly()&&!getStories().isNight())detail+="\nОткрыта только ночью: 20:00–06:00";
                 GameIO.illustratedAction(number,place.getName(),detail,"map_point_"+number);
             }

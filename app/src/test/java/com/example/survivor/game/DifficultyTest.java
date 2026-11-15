@@ -7,8 +7,8 @@ public class DifficultyTest {
  @Test public void rulesAreDifferentAndLockedAndPersisted() throws Exception {
   Fighter easy=new Fighter("John","",100),hard=new Fighter("John","",100);
   easy.chooseDifficulty(1);hard.chooseDifficulty(3);easy.takeDamage(20);hard.takeDamage(20);
-  assertEquals(87,easy.getHealth());assertEquals(75,hard.getHealth());
-  easy.increaseHunger(10);hard.increaseHunger(10);assertEquals(5,easy.getHunger());assertEquals(15,hard.getHunger());
+  assertEquals(87,easy.getHealth());assertEquals(76,hard.getHealth());
+  easy.increaseHunger(10);hard.increaseHunger(10);assertEquals(6,easy.getHunger());assertEquals(12,hard.getHunger());
   try{easy.chooseDifficulty(2);fail();}catch(IllegalStateException expected){}
   java.io.File file=Files.createTempFile("difficulty",".dat").toFile();
   try{GameSave.save(file,easy,0,new Locations());assertEquals(1,GameSave.load(file).player.difficulty());}finally{file.delete();}

@@ -32,8 +32,9 @@ final class ExplorationEncounters {
     static boolean tryEncounter(Fighter player, Locations locations, Location place, Scanner scanner, Random random) {
         if(!player.isAlive())return false;
         WorldStories clock=locations.getStories();int stage=locations.explorationStage(locations.getNumber(place));
-        int roll=random.nextInt(100),base=baseChance(locations,place,clock.isNight());
-        if(roll>=chance(locations,place,clock.isNight()))return true;
+        int roll=random.nextInt(100),base=Difficulty.encounterChance(baseChance(locations,place,clock.isNight()),player.difficulty());
+        int total=Difficulty.encounterChance(chance(locations,place,clock.isNight()),player.difficulty());
+        if(roll>=total)return true;
         boolean denBonus=roll>=base;
         int number=locations.getNumber(place);
         // Existing human encounters remain possible in the original search-based locations.

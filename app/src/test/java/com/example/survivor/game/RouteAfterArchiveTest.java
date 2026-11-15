@@ -7,6 +7,28 @@ import java.util.Scanner;
 import static org.junit.Assert.*;
 
 public class RouteAfterArchiveTest {
+    @Test public void optionalMedicalKitBuildsTrustAndSurvivesSaveWithoutBlockingRoute() throws Exception {
+        Locations world=new Locations();WorldStories stories=world.getStories();stories.archiveComplete=true;
+        Fighter player=new Fighter("John","",100);RouteAfterArchive route=stories.routeAfterArchive();
+        route.metOlga=true;route.olgaIntroComplete=true;route.olgaTrust=-1;
+        try(Scanner choices=new Scanner("4 3 7 0 0 0 1 1 0 0 4 3 8 0 0 0 0")){
+            route.visit(player,world.getLocation(13),stories,13,choices);
+        }
+        assertTrue(route.kitRequested);assertTrue(route.kitTaken);assertTrue(route.kitReturned);
+        assertTrue(route.olgaTrust>0);assertFalse(route.driverLead);
+        File file=Files.createTempFile("olga-trust", ".dat").toFile();
+        try{GameSave.save(file,player,0,world);RouteAfterArchive restored=GameSave.load(file).locations.getStories().routeAfterArchive();
+            assertTrue(restored.kitReturned);assertTrue(restored.olgaTrust>0);
+        }finally{file.delete();}
+    }
+
+    @Test public void earlierCargoFindCanBeDiscussedWithoutInventingDmitrysFate(){
+        Locations world=new Locations();WorldStories stories=world.getStories();stories.archiveComplete=true;
+        Fighter player=new Fighter("John","",100);RouteAfterArchive route=stories.routeAfterArchive();
+        route.metOlga=true;route.olgaIntroComplete=true;route.cargoFound=true;
+        try(Scanner choices=new Scanner("4 3 9 0 0 0 0")){route.visit(player,world.getLocation(13),stories,13,choices);}
+        assertTrue(route.olgaCargoDiscussed);assertFalse(route.driverLead);
+    }
     @Test public void newConversationUnlocksDriverLeadAndSurvivesSave() throws Exception {
         Locations world = new Locations();
         WorldStories stories = world.getStories();

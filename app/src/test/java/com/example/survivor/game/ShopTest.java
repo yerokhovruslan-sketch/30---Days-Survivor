@@ -16,7 +16,7 @@ public class ShopTest {
             check(buyer.getInventory().get(1) != buyer.getInventory().get(2), "Items are independent " + number);
             check(buyer.getCarryWeight() <= Fighter.MAX_WEIGHT, "Weight limit respected " + number);
         }
-        check(count == 57, "57 catalogue products, excluding healing and craft-only weapons");
+        check(count == 60, "60 catalogue products, including reserve-power supplies");
     }
 
     @org.junit.Test public void newSuppliesWorkWithFoodAndRepairSystems() {

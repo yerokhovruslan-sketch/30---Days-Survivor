@@ -50,10 +50,10 @@ final class ResidentialStories implements Serializable {
         update(world);List<Integer> result=new ArrayList<>();
         if(place==1 && (family==1 || (family==2 || family==4 || family==6) && (!familyDeparted || !familyApartmentSeen)))result.add(1);
         if((place==3 || place==13) && (family==2 && familyDeparted || family==3 || family==4 && familyDeparted)
-                && !familyFollowup)result.add(1);
+                && (!familyFollowup || family==3 && !world.homeSurvivors().atHome(HomeSurvivors.MARINA)))result.add(1);
         if(place==10 && clinicInfo && !clinicLoot)result.add(1);
-        if(place==1 && kirill>0 && kirill!=5 && kirill!=7)result.add(2);
-        if(place==35 && (kirill==2 || toolInfo && !toolCache))result.add(2);
+        if(place==1 && kirill>0 && kirill!=5 && kirill!=7 && !world.homeSurvivors().atHome(HomeSurvivors.KIRILL))result.add(2);
+        if(place==35 && (kirill==2 && !world.homeSurvivors().atHome(HomeSurvivors.KIRILL) || toolInfo && !toolCache))result.add(2);
         if(place==4 && viktor>0)result.add(3);
         return result;
     }
@@ -152,6 +152,10 @@ final class ResidentialStories implements Serializable {
             reward(player,scanner,new MedicalItem("Аптечка",40,50),new MedicalItem("Бинт",15,20),Shop.createItem(42));return;
         }
         if(place==3 || place==13) {
+            if(family==3 && familyFollowup && !world.homeSurvivors().atHome(HomeSurvivors.MARINA)){
+                GameIO.storyMenu("Марина и Артём","Марина узнаёт Джона. Артём рядом с ней.");GameIO.action(1,"Предложить Марине и Артёму пойти вместе домой");GameIO.action(0,"Уйти");
+                if(SurvivalSystems.choice(scanner)==1)world.homeSurvivors().invite(HomeSurvivors.MARINA,world,scanner);return;
+            }
             if(family==4) {
                 familyFollowup=true;changeReputation(-2);remember(world,1,"Марина узнала грабителя возле других выживших и предупредила их.");
                 pause(TITLES[1],"«Я помню тебя. Ты забрал еду у моего сына. Не подходи к нам». Марина отворачивается. Торговли и помощи не будет.",scanner);return;
@@ -252,7 +256,8 @@ final class ResidentialStories implements Serializable {
             GameIO.storyMenu("Кирилл",kirill==2?"Кирилл узнаёт Джона. Можно обменять припасы; запас ограничен.":"Кирилл держится настороженно. Совместных дел больше не предлагает.");
             if(kirill==2 && !kirillSignalTalk)GameIO.action(8,"Видел, как люди покидали район?");
             GameIO.action(1,"Обменять еду на запчасти","1 порция еды · осталось обменов: "+kirillTradeStock,kirill==2 && kirillTradeStock>0 && find(player,ResidentialStories::food)!=null);
-            GameIO.action(0,"Уйти");int talk=SurvivalSystems.choice(scanner);if(talk==8 && kirill==2 && !kirillSignalTalk){signalTalk(2,world,scanner);return;}if(talk==1 && kirill==2 && kirillTradeStock>0 && consume(player,ResidentialStories::food,null)) {
+            if(kirill==2&&!world.homeSurvivors().atHome(HomeSurvivors.KIRILL))GameIO.action(9,"Предложить Кириллу пойти вместе домой");
+            GameIO.action(0,"Уйти");int talk=SurvivalSystems.choice(scanner);if(talk==9&&kirill==2){world.homeSurvivors().invite(HomeSurvivors.KIRILL,world,scanner);return;}if(talk==8 && kirill==2 && !kirillSignalTalk){signalTalk(2,world,scanner);return;}if(talk==1 && kirill==2 && kirillTradeStock>0 && consume(player,ResidentialStories::food,null)) {
                 kirillTradeStock--;reward(player,scanner,Shop.createItem(19));
             }return;
         }
@@ -337,8 +342,10 @@ final class ResidentialStories implements Serializable {
             GameIO.action(3,"Забрать последнюю банку","Виктор не может сопротивляться",viktor==1);
             GameIO.action(4,"Дождаться грабителей","3 игровых часа · возможен тяжёлый бой",viktor!=5 && !ambushUsed);
             if((viktor==2 || viktor==3 || viktor==6) && !viktorSignalTalk)GameIO.action(8,"Куда забрали припасы магазина?");
+            if(viktor==2||viktor==6)GameIO.action(9,"Предложить Виктору пойти вместе домой");
 
             GameIO.action(0,"Уйти");int c=SurvivalSystems.choice(scanner);if(c==0)return;
+            if(c==9&&(viktor==2||viktor==6)){if(world.homeSurvivors().invite(HomeSurvivors.VIKTOR,world,scanner))return;continue;}
             if(c==8 && (viktor==2 || viktor==3 || viktor==6) && !viktorSignalTalk){signalTalk(3,world,scanner);continue;}
             if(c==1 || c==2) {if(helpViktor(player,world,c==2))world.advanceMinutes(10);continue;}
             if(c==3 && viktor==1) {

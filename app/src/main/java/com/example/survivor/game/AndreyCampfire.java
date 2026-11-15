@@ -14,7 +14,7 @@ final class AndreyCampfire {
     }
     private static boolean done(ForestStories story,int topic){return (story.campfireTopics&(1<<(topic-1)))!=0;}
     static void open(ForestStories story,Fighter p,WorldStories w,Scanner scanner){
-        if(!available(story)){GameIO.out().println("Андрей пока не готов к этому разговору.");return;}
+        if(!available(story)||story.campfireResting(w)){GameIO.out().println("Андрей пока не готов к этому разговору.");return;}
         if(!story.campfireIntro){
             GameIO.storyMenu("Пока горит костёр","Андрей убирает снасти под навес и долго рассматривает возвращённую фотографию: на ней он с молодым мужчиной у озера.\n\n«Я уж думал, не увижу эту штуку. Там не сами снасти важны, понимаешь? Ты не спешишь? Чай у меня, правда, дрянной. Но горячий».\n\nДжон садится на поваленное бревно и берёт металлическую кружку. Андрей смотрит на огонь: «Раньше здесь отдыхающие песни орали до трёх ночи. А теперь даже поговорить не с кем».");
             GameIO.action(1,"Иногда тишина лучше людей");GameIO.action(2,"Мне тоже не хватает обычных разговоров");GameIO.action(3,"Не привык задерживаться на одном месте");GameIO.action(4,"А кто на фотографии?");GameIO.action(0,"Поговорим в другой раз");
@@ -80,7 +80,7 @@ final class AndreyCampfire {
     private static void finish(ForestStories s,WorldStories w,Scanner scanner){
         GameIO.storyMenu("Последние угли","Огонь постепенно угасает. Андрей ставит пустые кружки у навеса. «Спасибо, что посидел. Давно я столько не разговаривал. Если мимо идти будешь, заглядывай. Чай почти закончился, но хотя бы костёр разведём».");
         GameIO.action(1,"Обязательно загляну");GameIO.action(2,"Береги себя, Андрей");GameIO.action(3,"Может, ещё встретимся. Если повезёт");GameIO.action(4,"Спасибо за разговор. Мне это было нужно");GameIO.action(5,"В следующий раз кофе принесу");GameIO.action(0,"Пока останусь");int c=SurvivalSystems.choice(scanner);if(c<1||c>5)return;
-        s.campfireFinishChoice=c;if(!s.campfireEnded){s.campfireEnded=true;w.advanceMinutes(2);w.note("Последние угли","Джон и Андрей поговорили у костра. К необсуждённым темам можно вернуться позже.");}GameIO.checkpoint();
+        s.campfireFinishChoice=c;if(!s.campfireEnded){s.campfireEnded=true;w.advanceMinutes(2);w.note("Последние угли","Джон и Андрей поговорили у костра. К необсуждённым темам можно вернуться позже.");}s.campfireFinishedAt=w.absoluteMinute()+1;GameIO.checkpoint();
         String[] answer={"","Обязательно загляну","Береги себя, Андрей","Может, ещё встретимся. Если повезёт","Спасибо за разговор. Мне это было нужно","В следующий раз кофе принесу"};
         say("Последние угли","Джон: «"+answer[c]+"».\n\nДжон поднимается с бревна и поправляет рюкзак. Позади тихо потрескивают угли. Андрей остаётся возле костра, глядя на фотографию. Впереди снова дорога и заражённые. Но сегодня Джон хотя бы ненадолго перестал чувствовать себя единственным человеком в этом мире.",scanner);
     }

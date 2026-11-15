@@ -132,7 +132,7 @@ final class MenuRenderer {
         renderStatus(frame);
         boolean guide = frame.menu.title.equals("Гайд");
         boolean locationPreview = frame.menu.title.equals("Локация");
-        if (guide || locationPreview) slot.setVisibility(View.GONE);
+        if (guide || locationPreview || (frame.status.enemies.isEmpty() && !frame.menu.title.equals("Состояние Джона"))) slot.setVisibility(View.GONE);
         LinearLayout content = (LinearLayout) cards.getParent();
         View eventCard = root.findViewById(R.id.event_card);
         int desiredEventIndex = frame.menu.board != null ? content.getChildCount()-1 : 1;
@@ -228,8 +228,8 @@ final class MenuRenderer {
                 if(!choice.priceTag.isEmpty()) {
                     append(choices,shopRow(choice),10);continue;
                 }
-                boolean difficulty = frame.menu.title.equals("Уровень сложности");
-                AppCompatButton action = button(choice.label, difficulty ? "" : choice.detail,
+                if(frame.menu.title.equals("Уровень сложности")){append(choices,difficultyRow(choice),10);continue;}
+                AppCompatButton action = button(choice.label, choice.detail,
                         choice.selected, choice.enabled, () -> listener.action(choice.number));
                 if(choice.selected)action.setAlpha(1f);
                 if ("point_searched".equals(choice.artwork)) action.setAlpha(choice.enabled ? .48f : .35f);
@@ -245,12 +245,6 @@ final class MenuRenderer {
                     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,-2,1);
                     params.setMargins(dp(3),0,dp(3),0);row.addView(action,params);
                 } else append(choice.number == 0 ? footer : choices, action, choice.number == 0 ? 0 : 10);
-                if (difficulty && !choice.detail.isEmpty()) {
-                    TextView description = text(choice.detail, 14, MUTED, false);
-                    description.setPadding(dp(8), dp(4), dp(8), dp(10));
-                    description.setLineSpacing(dp(3), 1f);
-                    append(choices, description, 0);
-                }
             }
         } else if (frame.mode == GameSession.Mode.ENDED) {
             append(choices, button(context.getString(R.string.restart_game), "", true, true, listener::restart), 10);
@@ -261,6 +255,21 @@ final class MenuRenderer {
         if(frame.menu.board!=null && !wasBoard)root.findViewById(R.id.section_scroll).post(()->((ScrollView)root.findViewById(R.id.section_scroll)).scrollTo(0,0));
         wasBoard=frame.menu.board!=null;
         renderedRevision = frame.revision;
+    }
+
+    private View difficultyRow(GameSession.Choice choice) {
+        LinearLayout row=column();
+        LinearLayout details=column();
+        details.setPadding(dp(16),dp(12),dp(16),dp(14));
+        GradientDrawable panel=new GradientDrawable();panel.setColor(0xff211f1d);panel.setCornerRadius(dp(8));panel.setStroke(dp(1),0xff61564b);details.setBackground(panel);
+        TextView description=text(choice.detail,15,INK,false);description.setLineSpacing(dp(4),1.12f);details.addView(description);
+        AppCompatButton select=button("Выбрать", "", true, choice.enabled, ()->listener.action(choice.number));
+        LinearLayout.LayoutParams selectParams=new LinearLayout.LayoutParams(-1,-2);selectParams.topMargin=dp(12);details.addView(select,selectParams);
+        details.setVisibility(View.GONE);
+        AppCompatButton heading=button(choice.label+"  ▾", "",false,choice.enabled,()->{});
+        heading.setOnClickListener(v->{listener.click();boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);heading.setText(choice.label+(open?"  ▴":"  ▾"));});
+        row.addView(heading);LinearLayout.LayoutParams detailParams=new LinearLayout.LayoutParams(-1,-2);detailParams.topMargin=dp(5);row.addView(details,detailParams);
+        return row;
     }
 
     private void renderEvents(String message) {

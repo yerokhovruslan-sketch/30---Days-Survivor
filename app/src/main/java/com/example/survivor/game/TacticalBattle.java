@@ -55,6 +55,7 @@ final class TacticalBattle implements java.io.Serializable {
     final List<String> log=new ArrayList<>();
     String terrain;
     int playerCell, turn=1, selected, spawned;
+    private int battleNeedsTurns;
     boolean moved, guarded, escaped;
     boolean aimed;
     boolean fixedEncounter,scriptedEncounter,denEncounter;
@@ -100,7 +101,7 @@ final class TacticalBattle implements java.io.Serializable {
         try { won=run(battle,scanner,false,false); return won; }
         finally {
             battle.depositCases();
-            if(won){world.clearPendingBattle(world.currentPlace());if(battle.denEncounter)world.monsterDens().complete(world.currentPlace(),battle,battle.random);else if(battle.scriptedEncounter && !battle.terrain.equals("Шум вскрытия"))world.rememberResolvedBattle(world.currentPlace(),battle);}
+            if(won){world.clearPendingBattle(world.currentPlace());world.lastLine().battleWon(battle.terrain);if(battle.denEncounter)world.monsterDens().complete(world.currentPlace(),battle,battle.random);else if(battle.scriptedEncounter && !battle.terrain.equals("Шум вскрытия"))world.rememberResolvedBattle(world.currentPlace(),battle);}
             else if(!player.isAlive())world.clearPendingBattle(world.currentPlace());
             GameIO.clearBattle();GameIO.checkpoint();
         }
@@ -532,7 +533,7 @@ final class TacticalBattle implements java.io.Serializable {
         return true;
     }
     void endTurn() {
-        GameIO.advanceMinutes(1);player.increaseHunger(1);player.increaseSleepiness(1);
+        GameIO.advanceMinutes(1);if(++battleNeedsTurns>=4){battleNeedsTurns=0;player.increaseHunger(1);player.increaseSleepiness(1);}
         if(!escaped && !won() && player.isAlive()) {
             moveCivilians();
             enemyTurn();
