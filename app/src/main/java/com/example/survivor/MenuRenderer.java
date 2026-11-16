@@ -652,7 +652,7 @@ final class MenuRenderer {
         button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setPadding(dp(14), dp(12), dp(14), dp(12));
         button.setMinHeight(dp(56));
-        button.setBackgroundResource(primary ? R.drawable.action_primary : R.drawable.menu_button);
+        button.setBackground(MatteSurface.create(context));
         ViewCompat.setBackgroundTintList(button, null);
         if (title.equals("Положить вещи на склад") || title.equals("Забрать вещи со склада"))
             MenuArtwork.apply(button, R.drawable.menu_art_warehouse);

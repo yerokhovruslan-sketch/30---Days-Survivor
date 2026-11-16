@@ -29,7 +29,7 @@ public class OpeningChapterTest {
   File dir=Files.createTempDirectory("opening-door").toFile();BlockingQueue<GameSession.Frame> frames=new LinkedBlockingQueue<>();
   try(GameSession session=new GameSession(dir,frames::offer)){
    session.start();GameSession.Frame f=next(frames);assertTrue(session.submit(f.revision,1));
-   f=next(frames);assertTrue(session.submit(f.revision,1));f=next(frames);assertTrue(session.submit(f.revision,1));
+   f=next(frames);assertEquals("Уровень сложности",f.menu.title);assertTrue(session.submit(f.revision,1));
    f=next(frames);assertEquals("opening_room",f.menu.scene);assertTrue(session.submit(f.revision,1));
    f=next(frames);assertEquals("opening_door",f.menu.scene);assertTrue(session.submit(f.revision,0));
    f=next(frames);assertEquals("opening_wounded",f.menu.scene);assertTrue(session.submit(f.revision,1));
@@ -53,7 +53,7 @@ public class OpeningChapterTest {
   try(GameSession s=new GameSession(dir,frames::offer)){
    s.start();GameSession.Frame f=next(frames);assertEquals("opening_start",f.menu.scene);assertTrue(s.submit(f.revision,1));
    f=next(frames);assertEquals("Уровень сложности",f.menu.title);assertTrue(s.submit(f.revision,1));
-   f=next(frames);assertTrue(s.submit(f.revision,1));f=next(frames);assertEquals("opening_room",f.menu.scene);assertTrue(s.submit(f.revision,2));
+   f=next(frames);assertEquals("opening_room",f.menu.scene);assertTrue(s.submit(f.revision,2));
    f=next(frames);assertEquals("opening_door",f.menu.scene);assertTrue(s.submit(f.revision,1));
    f=next(frames);assertNotNull(f.menu.board);assertEquals(3,f.status.enemies.size());assertFalse(new File(dir,"survivor-save.dat").exists());
   }finally{File[] files=dir.listFiles();if(files!=null)for(File f:files)f.delete();dir.delete();}

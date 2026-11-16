@@ -68,7 +68,7 @@ final class ShelterUpgrades implements Serializable {
         int before = player.getHealth();
         player.sleep();
         clock.bindRecovery(player);
-        clock.advanceMinutes(480);
+        clock.advanceSleepMinutes(480);
         player.recoverInjuries(player.getUpgrades().bed * 240);
         return player.getHealth() - before;
     }

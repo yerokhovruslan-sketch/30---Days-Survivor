@@ -9,7 +9,7 @@ final class MapClouds {
  static final int[] SOURCE={0,0,0,1,1,1,2,2};
  private static final float[] WIDTH={.25f,.39f,.21f,.31f,.22f,.37f,.29f,.19f};
  private static final float[] Y={.08f,.22f,.42f,.55f,.69f,.82f,.32f,.75f};
- private static final int[] ALPHA={76,98,56,85,65,105,72,52};
+ private static final int[] ALPHA={76,195,56,85,65,220,72,52};
  private static final int[] TONE={245,220,250,232,210,242,224,250};
  private static final long[] PERIOD={170000,210000,145000,195000,235000,185000,155000,225000};
  static float opacity(float zoom){float t=Math.max(0f,Math.min(1f,(zoom-1f)/1.1f));return 1f-t*t*(3f-2f*t);}

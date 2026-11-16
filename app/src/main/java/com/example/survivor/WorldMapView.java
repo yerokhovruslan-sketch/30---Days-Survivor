@@ -31,7 +31,7 @@ final class WorldMapView extends FrameLayout {
  }
  private int dp(float v){return Math.round(v*getResources().getDisplayMetrics().density);}
  private TextView label(String text,int size,boolean bold){TextView t=new TextView(getContext());t.setText(text);t.setTextColor(Color.WHITE);t.setTextSize(size);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;}
- private void control(String text,Runnable action,int weight){TextView t=label(text,15,true);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),dp(12),dp(12),dp(12));GradientDrawable bg=new GradientDrawable();bg.setColor(0xff29231f);bg.setCornerRadius(dp(8));bg.setStroke(dp(1),0xff9b856f);t.setBackground(bg);t.setOnClickListener(v->action.run());bottom.addView(t,new LinearLayout.LayoutParams(weight==1?0:-2,-2,weight));}
+ private void control(String text,Runnable action,int weight){TextView t=label(text,15,true);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),dp(12),dp(12),dp(12));GradientDrawable bg=new GradientDrawable();bg.setColor(0xe62a2a2a);bg.setCornerRadius(dp(8));bg.setStroke(dp(1),0xff888888);t.setBackground(bg);t.setOnClickListener(v->action.run());bottom.addView(t,new LinearLayout.LayoutParams(weight==1?0:-2,-2,weight));}
  static boolean matches(GameSession.Frame f){return f!=null&&f.mode==GameSession.Mode.CHOICE&&f.home&&f.menu.title.equals("Карта локаций")&&f.choices.stream().anyMatch(c->c.artwork.startsWith("map_point_"));}
  void showFrame(GameSession.Frame f){
   if(!matches(f)){stopWind();if(f!=null&&f.mode!=GameSession.Mode.BUSY){setVisibility(GONE);frame=null;selected=0;}return;}
@@ -83,7 +83,7 @@ final class WorldMapView extends FrameLayout {
    // written below. Allocate a fresh alpha-capable bitmap instead.
    Bitmap result=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);result.setHasAlpha(true);
    for(int i=0;i<pixels.length;i++){int v=pixels[i],r=Color.red(v),g=Color.green(v),b=Color.blue(v),old=Color.alpha(v);
-    if(cloud){int darkness=255-Math.min(r,Math.min(g,b));int a=Math.min(125,Math.max(0,(darkness-3)*2));pixels[i]=Color.argb(a*old/255,230,232,230);}
+    if(cloud){int darkness=255-Math.min(r,Math.min(g,b));int a=Math.min(190,Math.max(0,(darkness-3)*2));pixels[i]=Color.argb(a*old/255,230,232,230);}
     else {int white=Math.min(r,Math.min(g,b));int a=white>=249?0:white<=225?255:(249-white)*255/24;pixels[i]=(v&0x00ffffff)|((a*old/255)<<24);}
    }result.setPixels(pixels,0,width,0,0,width,height);return result;
   }

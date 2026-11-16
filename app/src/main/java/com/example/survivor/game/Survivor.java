@@ -20,6 +20,8 @@ class SurvivorInfo implements java.io.Serializable {
     private int campaignDifficulty;
     // Hundredths survive saves; old saves default to zero.
     private int hungerRemainder, sleepinessRemainder;
+    private int awakeMinutesRemainder;
+    void advanceAwakeMinutes(int minutes){if(minutes<=0)return;int total=awakeMinutesRemainder+minutes;sleepiness=Math.min(100,sleepiness+total/20);awakeMinutesRemainder=sleepiness>=100?0:total%20;}
     int difficulty(){return campaignDifficulty==0?2:campaignDifficulty;}
     void chooseDifficulty(int level){if(level<1 || level>3 || campaignDifficulty!=0)throw new IllegalStateException("Сложность уже выбрана");campaignDifficulty=level;}
 
@@ -33,7 +35,7 @@ class SurvivorInfo implements java.io.Serializable {
     public void increaseSleepiness(int amount) { if(amount>0){int total=sleepinessRemainder+amount*Difficulty.needsPercent(difficulty());sleepiness=Math.min(100,sleepiness+total/100);sleepinessRemainder=sleepiness==100?0:total%100;} }
     public void sleep() {
         if (!canSleep()) return;
-        sleepiness = 0;sleepinessRemainder=0;
+        sleepiness = 0;sleepinessRemainder=0;awakeMinutesRemainder=0;
         increaseHunger(10);
         restoreStamina(100);
     }
@@ -210,12 +212,12 @@ class Fighter extends SurvivorInfo {
     }
     private void wound(BodyPart part, int received) {
         BodyInjury wound = injury(part);
-        int severity = Math.max(2, received * 2);
+        int severity = GameIO.inBattle() ? Math.max(1, received + (ThreadLocalRandom.current().nextInt(100)<35 ? received / 2 : 0)) : Math.max(2, received * 2);
         if (part == BodyPart.HEAD && getEquippedHelmet() != null) severity = Math.max(1, severity / 2);
         if (part == BodyPart.TORSO && getEquippedArmor() != null) severity = Math.max(1, severity * 2 / 3);
         wound.trauma = Math.min(100, wound.trauma + severity);
         wound.treated = false; wound.recoveryMinutes = 0;
-        int bleedingChance = Math.min(75, 15 + received * 3);
+        int bleedingChance = GameIO.inBattle() ? Math.min(55, 8 + received * 2) : Math.min(75, 15 + received * 3);
         if (ThreadLocalRandom.current().nextInt(100) < bleedingChance)
             wound.bleeding = Math.min(5, wound.bleeding + (received >= 16 ? 2 : 1));
     }
@@ -284,15 +286,20 @@ class Fighter extends SurvivorInfo {
         int helmet=head==null?0:head.getArmorProtection()*head.getDurability()/100;
         return 100-(100-body)*(100-helmet)/100;
     }
+    private transient boolean lastHitGlanced;
+    boolean lastHitGlanced(){return lastHitGlanced;}
     @Override public void takeDamage(int damage) {
+        lastHitGlanced=false;
         if (damage <= 0) return;
         ItemInfo armor = getEquippedArmor();
         ItemInfo helmet = getEquippedHelmet();
         int reduction = getArmorReduction();
         int received = Difficulty.damage(Math.max(1, (damage * (100 - reduction) + 99) / 100),difficulty());
-        if(received > 0) {
+        if(received > 0 && (!GameIO.inBattle() || ThreadLocalRandom.current().nextInt(100)>=20)) {
             wound(randomBodyPart(), received);
             GameIO.hurt(this);
+        } else if(received > 0) {
+            lastHitGlanced=true;
         }
         if (armor != null && armor.getDurability() > 0) armor.wear(Math.max(1, (damage + 4) / 5));
         if (helmet != null && helmet.getDurability() > 0) helmet.wear(Math.max(1, (damage + 4) / 5));
@@ -1027,7 +1034,7 @@ class Survivor {
             if (!scanner.hasNext()) return false;
             int choice = SurvivalSystems.choice(scanner);
             if (choice == 0) {
-                player.increaseHunger(2); player.increaseSleepiness(2);
+                player.increaseHunger(2); 
                 if (player instanceof Fighter) ((Fighter) player).spendAvailableStamina(3);
                 showMovement("Тихое возвращение домой", 5);
                 return false;
@@ -1036,7 +1043,7 @@ class Survivor {
             if (choice == 1) {
                 int chance = SurvivalSystems.bypassChance(player);
                 if (!player.spendStamina(5)) { GameIO.out().println("Не хватает сил для обхода. Атакуйте или возвращайтесь."); continue; }
-                player.increaseHunger(2); player.increaseSleepiness(2);
+                player.increaseHunger(2); 
                 showMovement("Обходите противников", 3);
                 if (random.nextInt(100) < chance) { GameIO.out().println("Вы прошли незамеченными. Поиск можно продолжить."); return true; }
                 GameIO.out().println("Вас заметили при обходе! Противники атакуют первыми.");
@@ -1063,7 +1070,7 @@ class Survivor {
                     return fightEnemies(player, scanner, difficulty, random, enemies, !concealed);
                 }
                 boolean success = random.nextInt(100) < ambushChance;
-                player.increaseHunger(4); player.increaseSleepiness(2);
+                player.increaseHunger(4); 
                 if (!success) {
                     player.spendStamina(style.staminaCost);
                     GameIO.out().println("Засада сорвалась. Потрачены силы на подготовку; враги атакуют первыми.");
@@ -1166,7 +1173,7 @@ class Survivor {
                 } else if (action == 2) {
                     showMovement("Пытаетесь отступить", 3);
                     player.increaseHunger(4);
-                    player.increaseSleepiness(2);
+                    
                     battleHunger += 4;
                     boolean tired = player.getStamina() < escapeCost;
                     if (player instanceof Fighter) ((Fighter) player).spendAvailableStamina(10);
@@ -1241,7 +1248,7 @@ class Survivor {
             }
             GameIO.advanceMinutes(1);
             player.increaseHunger(4);
-            player.increaseSleepiness(2);
+            
             battleHunger += 4;
             if (!zombie.isAlive()) {
                 messages.add("> " + zombie.getName() + " уничтожен.");
@@ -1392,7 +1399,7 @@ class Survivor {
 
                     GameIO.leaveHome();
                     selectedSurvivor.increaseHunger(2);
-                    selectedSurvivor.increaseSleepiness(2);
+                    
                     travel(selectedSurvivor, "Путь к локации: " + destination.getName(), 5,GameIO.footsteps(locations.getNumber(destination)));
                     locations.enter(destination);
                     boolean returnedToBattle = locations.getStories().pendingBattle(locations.getNumber(destination))!=null;
@@ -1585,7 +1592,7 @@ class Survivor {
                         if (exhausted || !continueExploring(selectedSurvivor, scanner, locations.getStories())) {
                             if(!selectedSurvivor.isAlive()){running=false;break;}
                             selectedSurvivor.increaseHunger(2);
-                            selectedSurvivor.increaseSleepiness(2);
+                            
                             travel(selectedSurvivor, "Возвращение домой", 5);
                             ExplorationEncounters.tryEncounter(explorer, locations, destination, scanner, ThreadLocalRandom.current());
                             if (selectedSurvivor.getHealth() == 0) {
@@ -1618,7 +1625,7 @@ class Survivor {
             } else if (action1 == 4) {
                 GameIO.leaveHome();
                 selectedSurvivor.increaseHunger(2);
-                selectedSurvivor.increaseSleepiness(2);
+                
                 travel(selectedSurvivor, "Путь в магазин", 3);
                 boolean in_the_store = true;
                 while (in_the_store) {

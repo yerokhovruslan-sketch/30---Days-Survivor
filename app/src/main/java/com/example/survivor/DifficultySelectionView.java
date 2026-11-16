@@ -40,15 +40,15 @@ final class DifficultySelectionView extends FrameLayout {
         TextView heading=text("ВЫБОР СЛОЖНОСТИ",21,0xffe5d7c6,true);heading.setGravity(Gravity.CENTER);heading.setLetterSpacing(.12f);outer.addView(heading);
         TextView hint=text("От сложности зависит урон, количество ресурсов и скорость роста потребностей.",14,0xffc1b1a1,false);
         hint.setGravity(Gravity.CENTER);hint.setPadding(0,dp(8),0,dp(8));outer.addView(hint);
-        LinearLayout info=new LinearLayout(context);info.setGravity(Gravity.CENTER_VERTICAL);info.setPadding(dp(8),dp(5),dp(8),dp(5));info.setBackground(border(0xbb171513,0xff655447));
+        LinearLayout info=new LinearLayout(context);info.setGravity(Gravity.CENTER_VERTICAL);info.setPadding(dp(8),dp(5),dp(8),dp(5));info.setBackground(border(0xe5262626,0xff777777));
         info.addView(icon(R.drawable.difficulty_icon_info,23));TextView warning=text("После начала игры изменить сложность нельзя. Для другого уровня потребуется новая игра.",13,0xffd2c1ae,false);
         LinearLayout.LayoutParams warningParams=new LinearLayout.LayoutParams(0,-2,1);warningParams.leftMargin=dp(8);info.addView(warning,warningParams);outer.addView(info);
         ScrollView scroll=new ScrollView(context);scroll.setFillViewport(false);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         options=new LinearLayout(context);options.setOrientation(LinearLayout.VERTICAL);options.setPadding(0,dp(8),0,dp(8));
         LayoutTransition transition=new LayoutTransition();transition.enableTransitionType(LayoutTransition.CHANGING);transition.setDuration(250);options.setLayoutTransition(transition);scroll.addView(options);
         LinearLayout footer=new LinearLayout(context);footer.setGravity(Gravity.CENTER_VERTICAL);outer.addView(footer);
-        ImageView back=icon(R.drawable.difficulty_icon_back,42);back.setContentDescription("Назад в главное меню");back.setBackground(border(0xee171411,0xff655447));footer.addView(back);back.setOnClickListener(v->{if(!submitted){submitted=true;choose.accept(0);}});
-        TextView start=text("НАЧАТЬ ИГРУ",20,0xff211b15,true);start.setGravity(Gravity.CENTER);start.setPadding(dp(12),dp(12),dp(12),dp(12));start.setBackground(border(0xffc9b49b,0xffebd3b2));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,-2,1);sp.leftMargin=dp(12);footer.addView(start,sp);startButton=start;
+        ImageView back=icon(R.drawable.difficulty_icon_back,42);back.setContentDescription("Назад в главное меню");back.setBackground(border(0xe62a2a2a,0xff777777));footer.addView(back);back.setOnClickListener(v->{if(!submitted){submitted=true;choose.accept(0);}});
+        TextView start=text("НАЧАТЬ ИГРУ",20,0xfff1f1f1,true);start.setGravity(Gravity.CENTER);start.setPadding(dp(12),dp(12),dp(12),dp(12));start.setBackground(border(0xee353535,0xffaaaaaa));LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,-2,1);sp.leftMargin=dp(12);footer.addView(start,sp);startButton=start;
         blackout=new View(context);blackout.setBackgroundColor(Color.BLACK);blackout.setAlpha(0f);blackout.setVisibility(GONE);addView(blackout,new LayoutParams(-1,-1));
         start.setOnClickListener(v->{if(selected==0||submitted)return;submitted=true;blackout.setVisibility(VISIBLE);blackout.setClickable(true);
             try{thunder=android.media.MediaPlayer.create(getContext(),R.raw.difficulty_thunder);if(thunder!=null){thunder.setOnCompletionListener(player->{player.release();if(thunder==player)thunder=null;});thunder.start();}}catch(RuntimeException ignored){if(thunder!=null){thunder.release();thunder=null;}}
@@ -83,7 +83,7 @@ final class DifficultySelectionView extends FrameLayout {
             TextView name=text(choice.label.toUpperCase(java.util.Locale.ROOT),18,0xffe7d8c5,true);name.setPadding(0,0,dp(6),0);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
             if(choice.number==selected){ImageView mark=icon(R.drawable.difficulty_icon_selected,30);LinearLayout.LayoutParams m=(LinearLayout.LayoutParams)mark.getLayoutParams();m.rightMargin=dp(10);row.addView(mark,m);}
             if(choice.number==selected){
-                LinearLayout detail=new LinearLayout(getContext());detail.setOrientation(LinearLayout.VERTICAL);detail.setPadding(dp(12),dp(10),dp(12),dp(12));detail.setBackground(border(0xee171411,0xff5e554e));group.addView(detail);expandedDetail=detail;
+                LinearLayout detail=new LinearLayout(getContext());detail.setOrientation(LinearLayout.VERTICAL);detail.setPadding(dp(12),dp(10),dp(12),dp(12));detail.setBackground(border(0xee252525,0xff777777));group.addView(detail);expandedDetail=detail;
                 TextView description=text(choice.detail,15,0xffe4d7c8,false);description.setLineSpacing(dp(3),1.08f);detail.addView(description);
                 LinearLayout stats=new LinearLayout(getContext());stats.setPadding(0,dp(10),0,0);detail.addView(stats);
                 String[] labels=choice.number==1?new String[]{"Урон ниже","Добычи больше","Потребности медленнее"}:choice.number==2?new String[]{"Обычный урон","Обычная добыча","Обычные потребности"}:new String[]{"Урон выше","Добычи меньше","Потребности быстрее"};

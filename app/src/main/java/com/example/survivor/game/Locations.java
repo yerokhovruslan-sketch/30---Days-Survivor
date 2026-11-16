@@ -262,7 +262,7 @@ class Location implements java.io.Serializable {
             GameIO.action(0, "Вернуться домой");
             int choice = SurvivalSystems.choice(scanner);
             if (choice == 0) return false;
-            if (choice == 1) { world.advanceMinutes(20); player.increaseHunger(1); player.increaseSleepiness(1); }
+            if (choice == 1) { world.advanceMinutes(20); player.increaseHunger(1); }
             else if (choice == 2) player.spendAvailableStamina(12);
             else return false;
             stateResolved = true;

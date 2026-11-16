@@ -295,6 +295,8 @@ final class TacticalBattle implements java.io.Serializable {
                 case 10 -> used=this.aim();
                 case 11 -> used=this.destroy();
                 case 12 -> used=this.extractCases();
+                case 13 -> used=this.swapWithZombie();
+                case 14 -> used=this.pushZombie();
                 case 9 -> {
                     Unit target=this.target();
                     if(this.allowSurrender && target!=null && target.enemy instanceof HostileSurvivor
@@ -347,6 +349,28 @@ final class TacticalBattle implements java.io.Serializable {
         playerCell=cell;moved=true;aimed=false;selectedObstacle=-1;
         log.add("Джон → "+coordinate(cell)+". Теперь выберите действие.");
         return true;
+    }
+    boolean canSwapWithZombie(){Unit u=target();return !won() && selectedObstacle<0 && u!=null && u.enemy instanceof Zombie && distance(playerCell,u.cell)==1 && player.getStamina()>=player.staminaCost(6);}
+    boolean swapWithZombie(){
+        if(!canSwapWithZombie() || !player.spendStamina(6))return false;
+        Unit u=target();int old=playerCell;playerCell=u.cell;u.cell=old;aimed=false;selectedObstacle=-1;
+        log.add("Джон прорывается мимо заражённого и меняется с ним местами. Потрачено действие.");return true;
+    }
+    int pushDistance(){return player.getStamina()>=60?2:1;}
+    int pushDestination(Unit u,int distance){
+        int step=u.cell-playerCell,cell=u.cell;
+        for(int i=0;i<distance;i++){
+            int next=cell+step;
+            if(next<0 || next>=64 || Math.abs(step)==1 && next/8!=cell/8 || !free(next))break;
+            cell=next;
+        }
+        return cell;
+    }
+    boolean canPushZombie(){Unit u=target();return !won() && selectedObstacle<0 && u!=null && u.enemy instanceof Zombie && distance(playerCell,u.cell)==1 && player.getStamina()>=player.staminaCost(8) && pushDestination(u,pushDistance())!=u.cell;}
+    boolean pushZombie(){
+        if(!canPushZombie())return false;Unit u=target();int start=u.cell,dest=pushDestination(u,pushDistance());
+        if(!player.spendStamina(8))return false;u.cell=dest;u.skip=Math.max(u.skip,1);u.jump=-1;aimed=false;
+        log.add("Джон отталкивает заражённого на "+distance(start,dest)+" кл. Заражённый теряет следующий ход.");return true;
     }
     static String coordinate(int cell) { return "АБВГДЕЖЗ".charAt(cell%8)+Integer.toString(cell/8+1); }
     /** Supercover ray: even a corner-touching solid obstacle blocks a shot. */
@@ -533,7 +557,7 @@ final class TacticalBattle implements java.io.Serializable {
         return true;
     }
     void endTurn() {
-        GameIO.advanceMinutes(1);if(++battleNeedsTurns>=4){battleNeedsTurns=0;player.increaseHunger(1);player.increaseSleepiness(1);}
+        GameIO.advanceMinutes(1);if(++battleNeedsTurns>=4){battleNeedsTurns=0;player.increaseHunger(1);}
         if(!escaped && !won() && player.isAlive()) {
             moveCivilians();
             enemyTurn();
@@ -618,7 +642,7 @@ final class TacticalBattle implements java.io.Serializable {
         if(unit.type()==ZombieType.RUNNER)damage=damage*3/2;
         if(guarded && victim==player)damage=Math.max(1,damage*40/100);
         int before=victim.getHealth();victim.takeDamage(damage);
-        if(victim==player){visual("damage",targetCell,0);log.add(unit.enemy.getName()+" ранит Джона. Проверьте состояние тела.");}
+        if(victim==player){visual("damage",targetCell,0);log.add(unit.enemy.getName()+(player.lastHitGlanced()?" задевает Джона: скользящий удар без травмы.":" ранит Джона. Проверьте состояние тела."));}
         else {visual("damage",targetCell,before-victim.getHealth());log.add(unit.enemy.getName()+" атакует "+victimName+": −"+(before-victim.getHealth())+" HP.");}
     }
     int enemyTargetCell(Unit unit) {
@@ -769,6 +793,10 @@ final class TacticalBattle implements java.io.Serializable {
         GameIO.action(6,"Поднять трофей","Своя или соседняя клетка",nearLoot);
         if(!won())GameIO.action(7,"Сбежать","С края поля · возможен удар в спину",edge(playerCell));
         GameIO.action(8,"Завершить ход","+выносливость");
+        if(!won() && target!=null && target.enemy instanceof Zombie && distance(playerCell,target.cell)==1){
+            GameIO.action(13,"Поменяться местами","6 сил · одно действие",canSwapWithZombie());
+            GameIO.action(14,"Оттолкнуть","8 сил · "+pushDistance()+" кл. · одно действие",canPushZombie());
+        }
         GameIO.action(10,aimed?"Прицел подготовлен":"Прицелиться","+15 п.п. к следующему выстрелу · одно действие",!aimed && player.getEquippedWeapon()!=null && player.getEquippedWeapon().getAmmoType()!=null);
         if(selectedObstacle>=0)GameIO.action(11,"Разрушить преграду","Соседняя клетка · пожарный топор или кувалда",canDestroy());
         if(player.getEquippedWeapon()!=null && player.heldCases(player.getEquippedWeapon())>0)

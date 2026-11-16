@@ -195,6 +195,7 @@ public class MainActivity extends AppCompatActivity {
     private void showTravelScene(String text){
         travelHandler.removeCallbacksAndMessages(null);travelOverlay.animate().cancel();
         if(text==null){travelOverlay.setVisibility(View.GONE);return;}
+        if(searchOverlay!=null && searchOverlay.getVisibility()==View.VISIBLE){dotsHandler.removeCallbacks(dotsTick);searchOverlay.animate().cancel();searchText.animate().cancel();searchOverlay.setVisibility(View.GONE);}
         travelLabel.setText(text+"  ·");travelOverlay.setVisibility(View.VISIBLE);travelOverlay.setAlpha(0);travelOverlay.animate().alpha(1).setDuration(450).start();
         travelHandler.postDelayed(()->travelLabel.setText(text+"  ·  ·"),700);
         travelHandler.postDelayed(()->travelLabel.setText(text+"  ·  ·  ·"),1300);
@@ -224,9 +225,8 @@ public class MainActivity extends AppCompatActivity {
             if(searchOverlay.getVisibility()==View.VISIBLE)searchOverlay.animate().alpha(0f).setDuration(450).withEndAction(()->{searchOverlay.setVisibility(View.GONE);searchOverlay.setAlpha(1f);}).start();
             return;
         }
-        searchText.setText(phrase);searchText.setAlpha(0f);searchOverlay.setAlpha(0f);searchOverlay.setVisibility(View.VISIBLE);
+        searchText.setText(phrase);searchText.setAlpha(1f);searchOverlay.setAlpha(0f);searchOverlay.setVisibility(View.VISIBLE);
         searchOverlay.animate().alpha(1f).setDuration(500).start();
-        searchText.animate().alpha(1f).setStartDelay(350).setDuration(750).start();
         dotsStep=0;dotsHandler.post(dotsTick);
     }
     @Override protected void onDestroy(){if(terminalPuzzle!=null)terminalPuzzle.close();dotsHandler.removeCallbacksAndMessages(null);travelHandler.removeCallbacksAndMessages(null);super.onDestroy();}

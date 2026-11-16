@@ -33,6 +33,7 @@ final class GameIO {
     }
     static void clearBattle() { if (CURRENT.get() != null) CURRENT.get().battle(null, null, null); }
     static boolean supportsTactics() { return CURRENT.get() != null; }
+    static boolean inBattle(){return CURRENT.get()!=null && CURRENT.get().inBattle();}
     static void board(BattleBoard board) { if (CURRENT.get() != null) CURRENT.get().board(board); }
     static void scene(String scene) { if(CURRENT.get()!=null)CURRENT.get().scene(scene); }
     static void checkpoint() { if(CURRENT.get()!=null)CURRENT.get().checkpoint(); }

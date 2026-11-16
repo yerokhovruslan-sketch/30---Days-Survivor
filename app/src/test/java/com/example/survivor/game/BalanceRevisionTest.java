@@ -20,7 +20,7 @@ public class BalanceRevisionTest {
   assertEquals(13,Difficulty.damage(20,1));assertEquals(20,Difficulty.damage(20,2));assertEquals(24,Difficulty.damage(20,3));
   assertEquals(8,Difficulty.encounterChance(10,1));assertEquals(10,Difficulty.encounterChance(10,2));assertEquals(12,Difficulty.encounterChance(10,3));
   Fighter p=new Fighter("John","",100);TacticalBattle battle=new TacticalBattle(p,1,new Random(1),List.of());
-  for(int i=0;i<12;i++)battle.endTurn();assertEquals(3,p.getHunger());assertEquals(3,p.getSleepiness());
+  for(int i=0;i<12;i++)battle.endTurn();assertEquals(3,p.getHunger());assertEquals(0,p.getSleepiness());
  }
  @Test public void lastChanceSavesWithoutSnapshotsAndDeathOnlyRemovesItsOwnAttempt() throws Exception {
   File dir=Files.createTempDirectory("ironman").toFile();File current=new File(dir,"survivor-save.dat");

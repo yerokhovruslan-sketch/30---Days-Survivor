@@ -94,7 +94,7 @@ public final class GameSession implements AutoCloseable {
         if(player==null || !player.isAlive() || !foreground || manualPause || reading || !menu.scene.isEmpty() || enemies!=null || menu.board!=null || clock()==null || !waiting)return;
         int minutes=activeClock.tick(elapsed,true);
         if(minutes>0){int before=clock().absoluteMinute();clock().advanceMinutes(minutes);
-            if(player!=null){player.increaseHunger(clock().absoluteMinute()/60-before/60);player.increaseSleepiness(clock().absoluteMinute()/45-before/45);}
+            if(player!=null){player.increaseHunger(clock().absoluteMinute()/60-before/60);}
             clock().refreshMarket();
             if(menu.title.equals("Покупка") && !menu.quantity){menu=new GameMenu.Builder("Покупка","Остатки и цены обновляются по игровым часам.");Shop.showCatalogue();}
             publish(atMain?Mode.MAIN:Mode.CHOICE,false);if(clock().minuteOfDay()%5==0)checkpoint();}
@@ -177,6 +177,7 @@ public final class GameSession implements AutoCloseable {
     }
 
     void player(SurvivorInfo player) { this.player = player; }
+    boolean inBattle(){return enemies!=null;}
     int difficulty(){return player==null?2:player.difficulty();}
     WorldStories clock() { return world == null ? null : world.getStories(); }
     Locations world() { return world; }

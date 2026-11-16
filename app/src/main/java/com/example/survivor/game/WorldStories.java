@@ -204,8 +204,10 @@ final class WorldStories implements Serializable {
     String time() { return String.format(Locale.ROOT, "%02d:%02d", minuteOfDay() / 60, minuteOfDay() % 60); }
     private transient Fighter recoveryPlayer;
     void bindRecovery(Fighter player) { recoveryPlayer=player; }
+    private transient boolean sleeping;
+    void advanceSleepMinutes(int minutes){sleeping=true;try{advanceMinutes(minutes);}finally{sleeping=false;}}
     void advanceMinutes(int minutes) {
-        if(recoveryPlayer!=null)recoveryPlayer.recoverInjuries(minutes);
+        if(recoveryPlayer!=null){recoveryPlayer.recoverInjuries(minutes);if(!sleeping)recoveryPlayer.advanceAwakeMinutes(minutes);}
         ensureClock();
         long total = (long) minuteOfDay + Math.max(0, minutes);
         day += (int) (total / 1440);

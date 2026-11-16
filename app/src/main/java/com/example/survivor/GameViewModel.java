@@ -109,8 +109,8 @@ public final class GameViewModel extends AndroidViewModel {
         if(session==null || pendingSearch!=null || waitingSearchResult)return;
         if(timedOpening!=null&&timedOpening.revision==frame.revision){openingHandler.removeCallbacksAndMessages(null);timedOpening=null;openingRunning=false;openingSeconds.setValue(0);openingAudio.stop();}
         if(!isSearchAction(frame,number)){session.submit(frame.revision,number);return;}
-        pendingSearch=frame;pendingSearchAction=number;searchRemaining=SearchDuration.holdMillis(searchRandom);session.setPaused(true);
-        searchScene.setValue(searchNarrative.choose(searchRandom,frame.place,frame.menu.title));effects.play(com.example.survivor.game.GameSound.SEARCH);
+        pendingSearch=frame;pendingSearchAction=number;String phrase=searchNarrative.choose(searchRandom,frame.place,frame.menu.title);searchRemaining=SearchDuration.holdMillis(searchRandom,phrase);session.setPaused(true);
+        searchScene.setValue(phrase);effects.play(com.example.survivor.game.GameSound.SEARCH);
         if(foreground)scheduleSearch();
     }
     private void scheduleSearch(){searchDeadline=android.os.SystemClock.uptimeMillis()+searchRemaining;searchHandler.removeCallbacks(finishSearch);searchHandler.postDelayed(finishSearch,searchRemaining);}

@@ -17,7 +17,6 @@ enum SearchMode {
         GameIO.sound(GameSound.SEARCH);
         clock.advanceMinutes(minutes);
         player.increaseHunger(needs);
-        player.increaseSleepiness(needs);
         player.searchStealthModifier = stealth;
         return true;
     }

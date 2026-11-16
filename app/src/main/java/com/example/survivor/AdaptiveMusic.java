@@ -26,6 +26,8 @@ final class AdaptiveMusic implements AutoCloseable {
     private boolean foreground,paused,voice,focus,closed;
     private long stamp,clock,voiceReadyAt;
     private String applied="";
+    private final Random ambientRandom=new Random();
+    private MediaPlayer ambient;private long nextAmbient,ambientEnd;private float ambientVolume;private String ambientContext="";
     private float duck=1;
     private long duckUntil;
     private final class Slot {
@@ -57,6 +59,8 @@ final class AdaptiveMusic implements AutoCloseable {
     void restart(){openingPending=!preferences.getBoolean("opening_played",false);fadeOut(1200);plan=new MusicPlan(new Random());frame=null;clock=0;duck=1;duckUntil=0;}
     void update(GameSession.Frame next){
         if(next.mode==GameSession.Mode.BUSY)return;frame=next;
+        String ambienceKey=next.night+":"+next.home+":"+next.place+":"+next.menu.title.equals("Карта локаций");
+        if(!ambienceKey.equals(ambientContext)){ambientContext=ambienceKey;stopAmbient();nextAmbient=SystemClock.uptimeMillis()+10000+ambientRandom.nextInt(15001);}
         if(!next.hasPlayer || next.mode==GameSession.Mode.ENDED){fadeOut(2000);return;}
         if(openingPending && next.mode!=GameSession.Mode.MAIN)return;
         plan.update(context(next),clock,next.revision);
@@ -79,12 +83,12 @@ final class AdaptiveMusic implements AutoCloseable {
     }
     void foreground(boolean value){
         foreground=value;handler.removeCallbacks(tick);stamp=SystemClock.uptimeMillis();
-        if(value){if(!voice)requestFocus();resumePlayers();handler.post(tick);}else{pausePlayers();abandonFocus();}
+        if(value){if(!voice)requestFocus();resumePlayers();handler.post(tick);}else{pausePlayers();stopAmbient();abandonFocus();}
     }
-    void paused(boolean value){paused=value;if(value)pausePlayers();else{stamp=SystemClock.uptimeMillis();if(foreground){requestFocus();resumePlayers();}}}
+    void paused(boolean value){paused=value;if(value){pausePlayers();stopAmbient();}else{stamp=SystemClock.uptimeMillis();if(foreground){requestFocus();resumePlayers();}}}
     void voice(boolean value){
         if(voice==value)return;voice=value;
-        if(value){voiceReadyAt=SystemClock.uptimeMillis()+1100;fadeOut(1000);}
+        if(value){stopAmbient();voiceReadyAt=SystemClock.uptimeMillis()+1100;fadeOut(1000);}
         else {applied="";if(foreground){requestFocus();resumePlayers();}}
     }
     long voiceDelay(){return Math.max(0,voiceReadyAt-SystemClock.uptimeMillis());}
@@ -95,7 +99,7 @@ final class AdaptiveMusic implements AutoCloseable {
         if(Build.VERSION.SDK_INT>=26){if(request==null)request=new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attrs).setOnAudioFocusChangeListener(focusListener,handler).build();focus=audio.requestAudioFocus(request)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED;}
         else focus=audio.requestAudioFocus(focusListener,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
     }
-    private void focusChanged(int value){focus=value==AudioManager.AUDIOFOCUS_GAIN;if(focus){stamp=SystemClock.uptimeMillis();resumePlayers();}else pausePlayers();}
+    private void focusChanged(int value){focus=value==AudioManager.AUDIOFOCUS_GAIN;if(focus){stamp=SystemClock.uptimeMillis();resumePlayers();}else {pausePlayers();stopAmbient();}}
     private void abandonFocus(){if(Build.VERSION.SDK_INT>=26 && request!=null)audio.abandonAudioFocusRequest(request);else audio.abandonAudioFocus(focusListener);focus=false;}
     private void pausePlayers(){for(Slot s:slots)if(s.ready && s.player.isPlaying())s.player.pause();}
     private void resumePlayers(){if(!foreground || paused || voice || !focus)return;for(Slot s:slots)if(s.ready && !s.player.isPlaying() && s.player.getCurrentPosition()<s.end){s.player.start();markStarted(s.track);}}
@@ -107,6 +111,24 @@ final class AdaptiveMusic implements AutoCloseable {
             while(slots.size()>=2){Slot quiet=slots.get(0).level<=slots.get(1).level?slots.get(0):slots.get(1);remove(quiet);}
             Slot s=new Slot(name);slots.add(s);s.fade(1,fadeMs);s.player.prepareAsync();
         }catch(Exception failure){failed.add(name);}
+    }
+    private void stopAmbient(){if(ambient!=null){ambient.release();ambient=null;}ambientEnd=0;}
+    private void ambientTick(long now){
+        if(frame==null || !frame.hasPlayer || frame.mode==GameSession.Mode.ENDED || paused || voice || !focus){stopAmbient();return;}
+        boolean map=frame.menu.title.equals("Карта локаций") && frame.home;
+        boolean fight=frame.menu.board!=null && frame.menu.board.combatActive && !frame.status.enemies.isEmpty();
+        boolean quiet=plan.track.isEmpty() && !audible();
+        if(fight || !frame.menu.scene.isEmpty() || (!map && !quiet)){stopAmbient();return;}
+        if(ambient!=null){if(now>=ambientEnd || !ambient.isPlaying())stopAmbient();else{float fade=Math.min(1f,(ambientEnd-now)/1500f);ambient.setVolume(ambientVolume*fade,ambientVolume*fade);return;}}
+        if(now<nextAmbient)return;
+        nextAmbient=now+35000+ambientRandom.nextInt(35001);
+        boolean forest=!frame.home && (frame.place==2 || frame.place>=19 && frame.place<=32);
+        boolean city=!frame.home && !forest && (frame.place<35 || frame.place>50);
+        AmbientPlan.Cue cue=AmbientPlan.choose(ambientRandom,frame.night,forest,city,map);int resource=AmbientPlan.resource(cue);if(resource==0)return;
+        try{ambient=MediaPlayer.create(app,resource);if(ambient==null)return;ambientVolume=AmbientPlan.volume(cue);ambient.setVolume(ambientVolume,ambientVolume);
+            if(cue==AmbientPlan.Cue.WIND || cue==AmbientPlan.Cue.FOREST || cue==AmbientPlan.Cue.CITY){int d=ambient.getDuration();if(d>30000)ambient.seekTo(ambientRandom.nextInt(d-20000));}
+            ambient.start();ambientEnd=now+Math.min(22000,Math.max(1000,ambient.getDuration()-ambient.getCurrentPosition()));
+        }catch(RuntimeException error){stopAmbient();}
     }
     private final Runnable tick=new Runnable(){public void run(){
         if(closed || !foreground)return;
@@ -124,9 +146,10 @@ final class AdaptiveMusic implements AutoCloseable {
                     plan.naturalTrackEnd(clock);
                 }
             }
+            ambientTick(now);
             for(Slot s:new ArrayList<>(slots)){s.step(delta);if(s.target==0 && s.progress>=s.fade)remove(s);}
         }
         handler.postDelayed(this,100);
     }};
-    @Override public void close(){closed=true;handler.removeCallbacksAndMessages(null);for(Slot s:new ArrayList<>(slots))remove(s);abandonFocus();}
+    @Override public void close(){closed=true;stopAmbient();handler.removeCallbacksAndMessages(null);for(Slot s:new ArrayList<>(slots))remove(s);abandonFocus();}
 }
