@@ -9,6 +9,7 @@ final class MusicPlan {
         Area area;boolean combat,archive,scripted,danger,alive=true;int enemies,health=100;String cue="";
     }
     private final Random random;
+    private final ArrayDeque<String> recent=new ArrayDeque<>();
     Context context=new Context();
     private Area lastArea;
     String track="",lastTrack="",lastBattleTrack="";
@@ -24,7 +25,7 @@ final class MusicPlan {
     void opening(long now){track="houslast";lastTrack=track;story=false;windowEnd=Long.MAX_VALUE;due=0;}
     private boolean eligible(long now){return now>=battleAllowedAt;}
     private void startBattle(Context c,long now){
-        String[] choices=c.archive || c.scripted?new String[]{"countdown","anthem","hunted","fury"}:c.enemies>=4?new String[]{"wasteland","frenzy","fury","hunted","anthem"}:new String[]{"anthem","fury","hunted"};
+        String[] choices=c.archive || c.scripted?new String[]{"countdown","anthem","hunted","fury"}:c.enemies>=4?new String[]{"countdown","frenzy","fury","hunted","anthem"}:new String[]{"anthem","fury","hunted"};
         List<String> pool=new ArrayList<>(Arrays.asList(choices));pool.remove(lastBattleTrack);
         track=pool.get(random.nextInt(pool.size()));lastBattleTrack=track;story=false;hasBattleTrack=true;previousBattle=encounter;battleAllowedAt=now+90_000;windowEnd=Long.MAX_VALUE;
     }
@@ -73,10 +74,11 @@ final class MusicPlan {
             case NATURE->new String[]{"ash","light","wanderer"};
             default->new String[]{"concrete","ash","wanderer"};
         };
-        String[] global={"wanderer","wanderer","wanderer","houslast","tense","ashfall","ashfall","elegy","forgotten","fading"};
-        List<String> pool=new ArrayList<>(Arrays.asList(random.nextInt(100)<65?global:regional));pool.removeIf(t->t.equals(lastTrack));
+        String[] global={"wanderer","houslast","tense","ashfall","elegy","forgotten","fading","ash","light","concrete","decay","bunker","digital","dreams","graveyard"};
+        List<String> pool=new ArrayList<>(Arrays.asList(random.nextInt(100)<55?global:regional));pool.removeIf(t->t.equals(lastTrack) || recent.contains(t));
+        if(pool.isEmpty())for(String candidate:regional)if(!candidate.equals(lastTrack))pool.add(candidate);
         if(pool.isEmpty())pool.add("wanderer");
-        track=pool.get(random.nextInt(pool.size()));lastTrack=track;story=false;windowEnd=Long.MAX_VALUE;due=0;
+        track=pool.get(random.nextInt(pool.size()));lastTrack=track;recent.addLast(track);while(recent.size()>4)recent.removeFirst();story=false;windowEnd=Long.MAX_VALUE;due=0;
     }
     void naturalTrackEnd(long now){silenceFrom(now);}
     void naturalStoryEnd(long now){naturalTrackEnd(now);}

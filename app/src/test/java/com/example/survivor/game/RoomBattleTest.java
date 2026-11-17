@@ -15,7 +15,7 @@ public class RoomBattleTest {
    Fighter p=new Fighter("John","",100);TacticalBattle b=new TacticalBattle(p,1,new Random(seed),List.of(new Zombie(1,ZombieType.NORMAL)));
    b.playerCell=56;b.units.get(0).cell=5;b.civilians.add(new TacticalBattle.Civilian("Семья",50,3));b.buildRoom("Кухня");
    assertTrue(b.woodFloor);assertTrue(b.connected());assertNull(b.obstacles[56]);assertNull(b.obstacles[5]);assertNull(b.obstacles[3]);
-   assertEquals(TacticalBattle.Obstacle.FRIDGE,b.obstacles[1]);assertTrue(b.snapshot().woodFloor);
+   assertTrue(java.util.Arrays.stream(b.obstacles).anyMatch(o->o==TacticalBattle.Obstacle.FRIDGE));assertTrue(b.snapshot().woodFloor);
    ByteArrayOutputStream bytes=new ByteArrayOutputStream();new ObjectOutputStream(bytes).writeObject(b);
    TacticalBattle copy=(TacticalBattle)new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())).readObject();assertTrue(copy.woodFloor);assertEquals(b.obstacles[1],copy.obstacles[1]);
   }
@@ -27,6 +27,15 @@ public class RoomBattleTest {
   assertNull(b.obstacles[35]);assertNull(b.obstacles[36]);assertFalse(b.clearShot(24,40));assertTrue(b.clearShot(27,43));
   b.grassFloor=true;b.woodFloor=false;assertTrue(b.snapshot().grassFloor);
   ByteArrayOutputStream out=new ByteArrayOutputStream();new ObjectOutputStream(out).writeObject(b);
-  TacticalBattle copy=(TacticalBattle)new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())).readObject();assertTrue(copy.grassFloor);assertEquals(TacticalBattle.Obstacle.ROOM_WALL,copy.obstacles[32]);
+  TacticalBattle copy=(TacticalBattle)new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())).readObject();assertTrue(copy.grassFloor);assertArrayEquals(b.obstacles,copy.obstacles);
+ }
+ @Test public void roomLayoutsVaryAndRemainConnected(){
+  Set<String> layouts=new HashSet<>();
+  for(int seed=0;seed<300;seed++){
+   TacticalBattle b=new TacticalBattle(new Fighter("John","",100),1,new Random(seed),Collections.emptyList());
+   b.units.clear();b.playerCell=56;b.buildRoom("Кухня");
+   assertTrue(b.connected());assertNull(b.obstacles[b.playerCell]);layouts.add(Arrays.toString(b.obstacles));
+  }
+  assertTrue("Разных расстановок: "+layouts.size(),layouts.size()>=16);
  }
 }

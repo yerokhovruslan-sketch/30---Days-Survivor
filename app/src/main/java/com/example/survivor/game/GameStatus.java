@@ -6,7 +6,7 @@ import java.util.List;
 
 /** Immutable snapshots: the UI never reads mutable game entities on its own thread. */
 public final class GameStatus {
-    public final String weapon, armor, load, ammo, injuries, combatInjuries;
+    public final String weapon, armor, load, ammo, injuries, combatInjuries, temperature;
     public final int weaponCondition, protection;
     public final List<Enemy> enemies;
 
@@ -32,6 +32,7 @@ public final class GameStatus {
     }
 
     GameStatus(SurvivorInfo player, List<? extends CombatEnemy> opponents, CombatEnemy target) {
+        temperature=player==null?"":player.coldState();
         Fighter fighter = player instanceof Fighter ? (Fighter) player : null;
         injuries = fighter == null ? "" : fighter.injurySummary();
         combatInjuries = fighter == null ? "" : fighter.combatInjurySummary();

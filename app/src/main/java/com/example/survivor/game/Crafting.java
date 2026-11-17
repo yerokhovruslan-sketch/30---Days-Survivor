@@ -4,15 +4,16 @@ import java.util.*;
 
 /** Abstract game recipes: inventory transactions are atomic and output sizes are exact. */
 final class Crafting {
+    static final String STONE="Небольшой камень";
     static final String POWDER="Порох",KIT="Комплект деталей для патронов",METAL="Металл",WOOD="Древесина";
     static String casing(AmmoType type) {return switch(type){case REVOLVER->"Пустая револьверная гильза";case PISTOL->"Пустая пистолетная гильза";case SHELL->"Пустая дробовая гильза";case RIFLE->"Пустая карабинная гильза";default->"";};}
     static int componentPrice(String name) {
-        if(name.equals(POWDER))return 8;if(name.equals(KIT))return 12;if(name.equals(METAL)||name.equals(WOOD))return 5;
+        if(name.equals(STONE))return 1;if(name.equals(POWDER))return 8;if(name.equals(KIT))return 12;if(name.equals(METAL)||name.equals(WOOD))return 5;
         for(AmmoType type:AmmoType.values())if(!casing(type).isEmpty() && casing(type).equals(name))return switch(type){case REVOLVER,SHELL->3;case PISTOL->2;case RIFLE->4;default->0;};
         return 0;
     }
     static boolean isComponent(String name) {return componentPrice(name)>0;}
-    static int componentWeight(String name) {return name.contains("гильза")?10:name.equals(POWDER)?50:name.equals(KIT)?100:500;}
+    static int componentWeight(String name) {return name.equals(STONE)?100:name.contains("гильза")?10:name.equals(POWDER)?50:name.equals(KIT)?100:500;}
     static Tools component(String name) {int price=componentPrice(name);if(price==0)throw new IllegalArgumentException(name);return new Tools(name,"Условный игровой компонент для крафтинга",name.equals(POWDER)||name.equals(KIT)?3:1,price);}
     static final class Recipe {
         final String name;final int bench,anvil,amount,minutes;final AmmoType ammo;final WeaponStyle weapon;
@@ -35,7 +36,14 @@ final class Crafting {
         new Recipe("Топор",1,1,1,90,null,WeaponStyle.AXE,METAL,5,"Запчасти",2,WOOD,2),
         new Recipe("Мачете",1,1,1,120,null,WeaponStyle.MACHETE,METAL,4,"Металлические пластины",1,"Запчасти",2,"Изолента",1),
         new Recipe("Катана",2,1,1,240,null,WeaponStyle.KATANA,METAL,6,"Металлические пластины",2,"Запчасти",3,"Плотная ткань",1),
-        new Recipe("Пожарный топор",2,1,1,180,null,WeaponStyle.FIRE_AXE,METAL,7,"Металлические пластины",2,"Запчасти",3,"Изолента",2)
+        new Recipe("Пожарный топор",2,1,1,180,null,WeaponStyle.FIRE_AXE,METAL,7,"Металлические пластины",2,"Запчасти",3,"Изолента",2),
+        new Recipe("Шарики для рогатки",0,0,10,10,AmmoType.PELLET,null,STONE,10,"Изолента",1),
+        new Recipe("Метательная рогатка",1,0,1,45,null,WeaponStyle.SLINGSHOT,WOOD,2,"Изолента",1,"Запчасти",1),
+        new Recipe("Арбалет",2,1,1,180,null,WeaponStyle.CROSSBOW,METAL,6,WOOD,5,"Запчасти",4,"Изолента",1),
+        new Recipe("Пистолет",2,1,1,240,null,WeaponStyle.PISTOL,METAL,6,"Металлические пластины",2,"Запчасти",8,KIT,2),
+        new Recipe("Револьвер",2,1,1,260,null,WeaponStyle.REVOLVER,METAL,7,"Металлические пластины",2,"Запчасти",8,KIT,2),
+        new Recipe("Дробовик",2,1,1,300,null,WeaponStyle.SHOTGUN,METAL,8,WOOD,2,"Металлические пластины",3,"Запчасти",10),
+        new Recipe("Карабин",2,1,1,360,null,WeaponStyle.CARBINE,METAL,9,WOOD,2,"Металлические пластины",3,"Запчасти",15,KIT,3)
     );
     static Weapons weapon(Recipe r) {
         Weapons w=new Weapons(r.name,"Изготовлено на наковальне",4,r.weapon==WeaponStyle.KATANA?220:r.weapon==WeaponStyle.AXE?40:145,r.weapon);
@@ -72,6 +80,16 @@ final class Crafting {
         StringBuilder text=new StringBuilder();List<ItemInfo> all=possessions(p);
         for(Map.Entry<String,Integer> part:r.materials.entrySet())text.append(part.getKey()).append(": ").append(all.stream().filter(i->i.getName().equals(part.getKey())).count()).append('/').append(part.getValue()*batches).append('\n');
         return text+"Результат: "+r.amount*batches+" шт. · время: "+r.minutes*batches+" мин\nСтоимость компонентов в магазине: "+r.cost(batches)+" $";
+    }
+    static boolean fieldPellets(Fighter p,WorldStories clock) {
+        List<ItemInfo> selected=new ArrayList<>();
+        for(ItemInfo item:p.getInventory())if(item.getName().equals(STONE) && selected.size()<10)selected.add(item);
+        ItemInfo tape=p.getInventory().stream().filter(i->i.getName().equals("Изолента")).findFirst().orElse(null);
+        if(selected.size()<10 || tape==null){GameIO.sound(GameSound.ERROR);GameIO.out().println("Нужно 10 камней и одна изолента в рюкзаке.");return false;}
+        if(!p.spendStamina(2)){GameIO.out().println("Недостаточно сил.");return false;}
+        for(ItemInfo item:selected)p.getInventory().remove(item);p.getInventory().remove(tape);
+        p.getInventory().add(new Ammunition(AmmoType.PELLET,10));clock.advanceMinutes(10);
+        GameIO.out().println("Изготовлено 10 шариков для рогатки.");GameIO.checkpoint();return true;
     }
     static void recipeMenu(Fighter p,WorldStories clock,Recipe r,Scanner scanner) {
         while(true) {

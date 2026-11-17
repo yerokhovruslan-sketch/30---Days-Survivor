@@ -177,7 +177,7 @@ enum WeaponStyle {
     }
     int bleedChance() {return switch(this){case HUNTING_KNIFE->20;case HATCHET->15;case AXE,FIRE_AXE->25;case MACHETE,KATANA->30;default->0;};}
     boolean firearm() {return this==REVOLVER || this==PISTOL || this==SHOTGUN || this==CARBINE;}
-    int noise() {return switch(this){case KNIFE,HUNTING_KNIFE,SCREWDRIVER->1;case CLUB->3;case PIPE->5;case SLEDGEHAMMER->8;case CROSSBOW->4;case PISTOL->20;case REVOLVER->25;case CARBINE->35;case SHOTGUN->45;case FISTS,UNUSABLE->0;default->4;};}
+    int noise() {return switch(this){case KNIFE,HUNTING_KNIFE,SCREWDRIVER->1;case CLUB->1;case PIPE->2;case SLEDGEHAMMER->3;case CROSSBOW->4;case PISTOL->20;case REVOLVER->25;case CARBINE->35;case SHOTGUN->45;case FISTS,UNUSABLE->0;case SLINGSHOT->4;default->1;};}
     int capacity() {return switch(this){case REVOLVER->6;case PISTOL->12;case SHOTGUN->2;case CARBINE->5;default->1;};}
     int range() {return switch(this){case LONG,SHOVEL->2;case SHOTGUN->4;case CARBINE->8;case REVOLVER,PISTOL,CROSSBOW,SLINGSHOT->6;default->1;};}
 }
@@ -320,7 +320,7 @@ class Item{
      static boolean matchesProfile(ItemInfo item, LootProfile profile) {
          return switch (profile) {
              case FOOD -> item instanceof Food;
-             case MEDICAL -> item instanceof MedicalItem;
+             case MEDICAL -> MedicalItem.supports(item);
              case ARMS -> item instanceof Ammunition || item.getArmorProtection() > 0 || item instanceof Weapons && ((Weapons) item).getAmmoType() != null
                      || Crafting.isComponent(item.getName()) && !item.getName().equals(Crafting.METAL) && !item.getName().equals(Crafting.WOOD);
              case WORKSHOP -> item instanceof Tools || item instanceof Weapons && ((Weapons) item).getAmmoType() == null;

@@ -21,6 +21,11 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
                 output.flush();
                 file.getFD().sync();
             }
+            if (target.exists() && backup.exists()) {
+                // Never discard the old backup until the current file has been verified.
+                load(target);
+                if (backup.exists() && !backup.delete()) throw new IOException("Не удалось обновить резервную копию.");
+            }
             if (target.exists() && !target.renameTo(backup)) throw new IOException("Не удалось обновить сохранение.");
             if (!temporary.renameTo(target)) {
                 recover(target, backup);
@@ -33,18 +38,37 @@ GameSave(SurvivorInfo player, int balance, Locations locations) { this.player = 
     private static void recover(File target, File backup) throws IOException {
         if (backup.exists() && !target.exists() && !backup.renameTo(target))
             throw new IOException("Не удалось восстановить предыдущее сохранение.");
-        if (backup.exists() && target.exists() && !backup.delete())
-            throw new IOException("Не удалось обновить резервную копию.");
+
     }
 
     static synchronized GameSave load(File target) throws IOException {
         recover(target, new File(target.getPath() + ".bak"));
         if (!target.isFile()) throw new IOException("Сохранение ещё не создано.");
+        File backup = new File(target.getPath() + ".bak");
+        try { return read(target); }
+        catch (IOException primaryFailure) {
+            if (!backup.isFile()) throw primaryFailure;
+            final GameSave previous;
+            try { previous = read(backup); }
+            catch (IOException backupFailure) { primaryFailure.addSuppressed(backupFailure); throw primaryFailure; }
+            File damaged = new File(target.getPath() + ".corrupt-" + System.currentTimeMillis());
+            for (int suffix=1; damaged.exists(); suffix++) damaged=new File(target.getPath()+".corrupt-"+System.currentTimeMillis()+"-"+suffix);
+            if (!target.renameTo(damaged)) throw new IOException("Не удалось сохранить повреждённый файл для восстановления.", primaryFailure);
+            if (!backup.renameTo(target)) {
+                if (!damaged.renameTo(target)) throw new IOException("Не удалось восстановить ни основной файл, ни резервную копию.", primaryFailure);
+                throw new IOException("Не удалось восстановить резервную копию.", primaryFailure);
+            }
+            return previous;
+        }
+    }
+
+    private static GameSave read(File target) throws IOException {
         if (target.length() > 5_000_000) throw new IOException("Слишком большой файл сохранения.");
         Set<String> allowed = new HashSet<>(Arrays.asList("GameSave", "SurvivorInfo", "Fighter", "Medic", "Engineer",
                 "Locations", "Location", "Location$SearchPoint", "LocationState", "LootProfile",
                 "BodyPart", "BodyInjury", "ItemInfo", "Food", "WildFood", "ForestStories", "SemenStory", "MonsterDens", "MonsterDens$Den", "Tools", "Weapons", "MedicalItem",
-                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "RouteAfterArchive", "LastLine", "WarehouseFinale", "HomeSurvivors", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor"));
+                "Ammunition", "AmmoType", "WeaponStyle", "WorldStories", "ShelterUpgrades", "ResidentialStories", "DistrictClinic", "PharmacyWarehouse", "CityHospital", "QuietCourtyard", "GroceryStore", "ApartmentBuilding", "Rooftops", "Schoolyard", "School", "ZombieEar", "TacticalBattle", "TacticalBattle$Unit", "TacticalBattle$Civilian", "TacticalBattle$Obstacle", "PoliceArchive$Attempt", "RouteAfterArchive", "LastLine", "WarehouseFinale", "HomeSurvivors", "CombatEnemy", "Zombie", "ZombieType", "HostileSurvivor",
+                "ArkadyStory", "ArkadyEnemy", "VeraStory", "VeraEnemy", "ChanceMeetings", "JunkLoot$JunkItem"));
         Set<String> standard = new HashSet<>(Arrays.asList("java.lang.Enum", "java.lang.String", "java.lang.Object",
                 "java.lang.Integer", "java.lang.Number", "java.util.ArrayList", "java.util.HashSet", "java.util.HashMap",
                 "java.util.EnumMap", "java.util.IdentityHashMap"));

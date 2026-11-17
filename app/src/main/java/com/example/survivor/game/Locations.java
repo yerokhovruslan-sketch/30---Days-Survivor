@@ -178,11 +178,20 @@ class Location implements java.io.Serializable {
                 GameIO.action(i + 1, point.name, detail, !point.isSearched() && (!point.isLocked() || crowbar));
             }
             Locations world=GameIO.world();WorldStories stories=GameIO.clock();
+            if(world!=null && stories!=null && world.getNumber(this)==3){
+                boolean available=points.stream().anyMatch(point->!point.isSearched());
+                stories.arkady().tryRoad(java.util.concurrent.ThreadLocalRandom.current(),stories,available);
+                if(stories.arkady().atPlace(3))GameIO.action(89,"Машина у дороги","Внутри кто-то находится");
+            }
             MonsterDens.Den den=world==null||stories==null?null:stories.monsterDens().ensure(world,world.getNumber(this));
             if(den!=null&&den.accessible())GameIO.action(88,den.label(),den.cleared?"Оставленные трофеи":"Опасный бой · "+den.count+" заражённых");
             GameIO.action(0, "Вернуться домой");
             int choice = SurvivalSystems.choice(scanner);
             if (choice == 0) return null;
+            if(choice==89 && stories!=null && stories.arkady().atPlace(3)){
+                if(!stories.arkady().interact(player,stories,scanner,java.util.concurrent.ThreadLocalRandom.current()))return null;
+                continue;
+            }
             if(choice==88&&den!=null&&den.accessible()){
                 if(!stories.monsterDens().visit(player,stories,world.getNumber(this),scanner,java.util.concurrent.ThreadLocalRandom.current()))return null;
                 continue;
@@ -714,6 +723,7 @@ class Locations implements java.io.Serializable {
                 if(number==47 && getStories().lastLine().eastGateOpen)mapState="Восточный проход открыт";
                 String detail=(available?"Доступна":"Сейчас закрыта")+" · "+(seen?"Посещена":"Не посещена")
                     +"\n"+mapState+" · "+place.getSuppliesStatus();
+                if(getStories().waitingZombies(number))detail+="\nЗаражённые остались на локации";
                 if(place.isNightOnly()&&!getStories().isNight())detail+="\nОткрыта только ночью: 20:00–06:00";
                 GameIO.illustratedAction(number,place.getName(),detail,"map_point_"+number);
             }

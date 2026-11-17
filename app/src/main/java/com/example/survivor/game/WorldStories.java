@@ -21,6 +21,12 @@ final class WorldStories implements Serializable {
     private int day = 1;
     private int minuteOfDay = 480;
     private boolean clockInitialized = true;
+    private ChanceMeetings chanceMeetings;
+    ChanceMeetings chanceMeetings(){if(chanceMeetings==null)chanceMeetings=new ChanceMeetings();return chanceMeetings;}
+    private VeraStory vera;
+    VeraStory vera(){if(vera==null)vera=new VeraStory();return vera;}
+    private ArkadyStory arkady;
+    ArkadyStory arkady(){if(arkady==null)arkady=new ArkadyStory();return arkady;}
     private SemenStory semen;
     int openingChoice=-1;
     boolean openingChoiceRecorded,openingFollowupSeen;
@@ -131,8 +137,13 @@ final class WorldStories implements Serializable {
     void leavePoliceLocation() { }
     private java.util.Map<Integer,TacticalBattle> pendingBattles;
     private java.util.Map<Integer,java.util.Map<String,TacticalBattle>> resolvedBattles;
-    TacticalBattle pendingBattle(int place){return pendingBattles==null?null:pendingBattles.get(place);}
-    void rememberBattle(int place,TacticalBattle battle){if(pendingBattles==null)pendingBattles=new java.util.HashMap<>();pendingBattles.put(place,battle);}
+    TacticalBattle pendingBattle(int place){
+        if(pendingBattles==null)return null;TacticalBattle battle=pendingBattles.get(place);if(battle==null)return null;
+        battle.scheduleDepartures(absoluteMinute(),java.util.concurrent.ThreadLocalRandom.current());battle.expireDepartures(absoluteMinute());
+        if(!battle.hasRemainingEnemies()){pendingBattles.remove(place);return null;}return battle;
+    }
+    boolean waitingZombies(int place){TacticalBattle battle=pendingBattle(place);return battle!=null && battle.hasWaitingZombies();}
+    void rememberBattle(int place,TacticalBattle battle){if(pendingBattles==null)pendingBattles=new java.util.HashMap<>();battle.scheduleDepartures(absoluteMinute(),java.util.concurrent.ThreadLocalRandom.current());pendingBattles.put(place,battle);}
     void clearPendingBattle(int place){if(pendingBattles!=null)pendingBattles.remove(place);}
     void rememberResolvedBattle(int place,TacticalBattle battle){if(resolvedBattles==null)resolvedBattles=new java.util.HashMap<>();resolvedBattles.computeIfAbsent(place,key->new java.util.HashMap<>()).put(battle.terrain,battle);}
     TacticalBattle consumeResolvedBattle(int place,String terrain){if(resolvedBattles==null)return null;java.util.Map<String,TacticalBattle> battles=resolvedBattles.get(place);if(battles==null)return null;TacticalBattle battle=battles.remove(terrain);if(battles.isEmpty())resolvedBattles.remove(place);return battle;}
@@ -197,6 +208,7 @@ final class WorldStories implements Serializable {
         return remember(id,title,text,name,Collections.emptyList());
     }
     int currentPlace() {return currentPlace;}
+    int visitCount(int place){return visits.getOrDefault(place,0);}
     void note(String title,String text) {journal.add("День "+day+" — "+title+"\n"+text);}
     private void ensureClock() { if (!clockInitialized) { minuteOfDay = 480; clockInitialized = true; } }
     int minuteOfDay() { ensureClock(); return minuteOfDay; }
@@ -207,7 +219,7 @@ final class WorldStories implements Serializable {
     private transient boolean sleeping;
     void advanceSleepMinutes(int minutes){sleeping=true;try{advanceMinutes(minutes);}finally{sleeping=false;}}
     void advanceMinutes(int minutes) {
-        if(recoveryPlayer!=null){recoveryPlayer.recoverInjuries(minutes);if(!sleeping)recoveryPlayer.advanceAwakeMinutes(minutes);}
+        if(recoveryPlayer!=null){recoveryPlayer.recoverInjuries(minutes);if(!sleeping)recoveryPlayer.advanceAwakeMinutes(minutes);for(int elapsed=0;elapsed<minutes;elapsed+=30){int step=Math.min(30,minutes-elapsed),t=(minuteOfDay()+elapsed)%1440;boolean cold=t>=1080 || t<480;recoveryPlayer.updateCold(step,cold,GameIO.atHome());if(sleeping && GameIO.atHome() && recoveryPlayer.getUpgrades().blanket!=null)recoveryPlayer.updateCold(step,false,true);}}
         ensureClock();
         long total = (long) minuteOfDay + Math.max(0, minutes);
         day += (int) (total / 1440);

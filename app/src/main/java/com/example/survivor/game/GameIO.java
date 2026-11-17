@@ -94,8 +94,10 @@ final class GameIO {
         if (item instanceof Weapons) detail += "\n" + ((Weapons) item).combatStats();
         if (item instanceof Food) detail += "\nУтоляет голод: " + ((Food) item).getNutrition();
         if (item instanceof MedicalItem) detail += item.getName().toLowerCase(java.util.Locale.ROOT).contains("бинт") ? "\nКровотечение −3; обработка одной части тела" : "\nОстанавливает кровотечение; обработка одной части тела";
-        if(selected)selectedAction(number,verb+item.getName(),detail,enabled);
-        else action(number, verb + item.getName(), detail, enabled);
+        if(verb.startsWith("Забрать: "))verb=verb+item.getName()+" · "+(item instanceof JunkLoot.JunkItem?((JunkLoot.JunkItem)item).shownPrice():Integer.toString(item.getPrice()))+" $";
+        else verb=verb+item.getName();
+        if(selected)selectedAction(number,verb,detail,enabled);
+        else action(number, verb, detail, enabled);
     }
     static void mainMenu(SurvivorInfo player, int balance, Locations world) {
         CURRENT.get().mainMenu(player, balance, world);

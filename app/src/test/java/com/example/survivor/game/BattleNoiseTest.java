@@ -5,6 +5,12 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 public class BattleNoiseTest {
+    @Test public void meleeWeaponsStayMuchQuieterThanFirearms() {
+        assertEquals(1,WeaponStyle.CLUB.noise());assertEquals(2,WeaponStyle.PIPE.noise());
+        assertTrue(WeaponStyle.SLEDGEHAMMER.noise()<=3);
+        assertEquals(20,WeaponStyle.PISTOL.noise());assertEquals(45,WeaponStyle.SHOTGUN.noise());
+        assertTrue(WeaponStyle.CLUB.noise()*20<40);
+    }
     @Test public void searchingDoesNotAccumulateBattleNoise() {
         for(SearchMode mode:SearchMode.values()) {
             Fighter player=new Fighter("John","",100);

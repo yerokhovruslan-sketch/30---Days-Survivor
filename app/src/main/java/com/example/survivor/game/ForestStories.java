@@ -12,6 +12,15 @@ final class ForestStories implements Serializable {
     private static final long serialVersionUID=1L;
     static final String BOX="Зелёный ящик Андрея";
     private Map<Integer,Integer> forageDue;
+    private Map<Integer,Integer> stonesLeft;
+    int stonesRemaining(int place){return !supports(place)?0:stonesLeft==null?10:stonesLeft.getOrDefault(place,10);}
+    int collectStones(Fighter p,int place,WorldStories w){
+        int remaining=stonesRemaining(place);int count=Math.min(remaining,Math.max(0,(Fighter.MAX_WEIGHT-p.getCarryWeight())/Crafting.componentWeight(Crafting.STONE)));
+        if(count<=0){GameIO.out().println(remaining==0?"Камни здесь закончились.":"В рюкзаке нет места для камней.");return 0;}
+        if(!time(p,w,10,3))return 0;if(stonesLeft==null)stonesLeft=new HashMap<>();stonesLeft.put(place,remaining-count);
+        for(int i=0;i<count;i++)p.getInventory().add(Crafting.component(Crafting.STONE));
+        GameIO.out().println("Собрано камней: "+count+". Осталось на локации: "+(remaining-count)+".");GameIO.checkpoint();return count;
+    }
     boolean campSeen,cacheKnown,cacheOpened,cacheBandage,cacheAmmo;
     // 0 stranger; 1 peaceful; 2 accepted; 3 helped; 4 hostile; 5 left; 6 refused; 7 defeated.
     int andrey,deadline,boxState;
@@ -53,9 +62,15 @@ final class ForestStories implements Serializable {
         if(place==24&&questStarted&&boxState==0)GameIO.action(3,"Проверить рыбацкий домик","Поиск зелёного ящика Андрея");
         MonsterDens.Den den=w.monsterDens().existing(place);
         if(den!=null&&den.accessible())GameIO.action(7,den.label(),den.cleared?"Оставленные трофеи":"Опасный бой · "+den.count+" заражённых");
+        GameIO.action(12,"Собрать ветки","10 минут · древесина для костра");
+        GameIO.action(10,"Собрать камни","10 минут · осталось "+stonesRemaining(place)+"/10",stonesRemaining(place)>0);
+        GameIO.action(11,"Изготовить шарики","10 камней + изолента · 10 шариков · 10 минут");
         GameIO.action(8,"Осмотреть тело","Проверить травмы и лечение");GameIO.action(9,"Передохнуть","Восстановить силы");GameIO.action(0,"Вернуться домой");
         int action=SurvivalSystems.choice(scanner);if(action==0)return -1;if(action==1&&loc.getRemainingSearches()>0)return 1;
-        if(action==2&&wait==0)forage(p,place,w,random);
+        if(action==12){ItemInfo wood=Crafting.component(Crafting.WOOD);if(p.canCarry(wood)&&time(p,w,10,2)){p.addItem(wood);GameIO.out().println("Собраны ветки: древесина ×1.");}else GameIO.out().println("Не удалось собрать ветки.");}
+        else if(action==10)collectStones(p,place,w);
+        else if(action==11)Crafting.fieldPellets(p,w);
+        else if(action==2&&wait==0)forage(p,place,w,random);
         else if(action==7&&den!=null&&den.accessible()){if(!w.monsterDens().visit(p,w,place,scanner,random))return -1;}
         else if(action==8)Survivor.inspectBody(p,scanner);else if(action==9)Survivor.rest(p,30);
         else if(place==20&&action==3&&!w.homeSurvivors().atHome(HomeSurvivors.ANDREY))andrey(p,w,scanner,random,wallet);

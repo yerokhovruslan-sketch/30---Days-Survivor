@@ -34,23 +34,28 @@ final class SurvivalSystems {
     }
     static void collect(Fighter fighter, List<ItemInfo> found, Scanner scanner) {
         List<ItemInfo> remaining = new ArrayList<>(found);
+        Set<Integer> selected = new HashSet<>();
         while (!remaining.isEmpty()) {
+            int total = 0; for (int index : selected) total += remaining.get(index).getWeightGrams();
+            boolean fits = (long) fighter.getCarryWeight() + total <= Fighter.MAX_WEIGHT;
             GameIO.player(fighter);
-            GameIO.menu("Находки", "Заберите нужное. Вес рюкзака не должен превышать 25 кг.");
-            for (int i = 0; i < remaining.size(); i++) {
-                ItemInfo item = remaining.get(i);
-                GameIO.item(i + 1, item, "Забрать: ", fighter.canCarry(item));
-            }
+            GameIO.menu("Находки", String.format(Locale.ROOT, "Выберите вещи и заберите вместе. Выбрано: %d · %.2f кг. %s", selected.size(), total / 1000.0, load(fighter)));
+            for (int i = 0; i < remaining.size(); i++) GameIO.item(i + 1, remaining.get(i), "Забрать: ", true, selected.contains(i));
+            GameIO.action(900, "Забрать выбранное", fits ? "Все выбранные предметы" : "Превышен предел 25 кг", !selected.isEmpty() && fits);
             GameIO.action(-1, "Разгрузить рюкзак");
             GameIO.action(0, "Оставить остальные находки");
             int n = choice(scanner);
             if (n == 0) { GameIO.out().println("Остальные находки оставлены."); return; }
             if (n == -1) { backpack(fighter, scanner); continue; }
+            if (n == 900) {
+                if (selected.isEmpty() || !fits) { GameIO.sound(GameSound.ERROR); continue; }
+                for (int i=remaining.size()-1; i>=0; i--) if (selected.contains(i)) {
+                    ItemInfo item=remaining.remove(i); fighter.addItem(item); GameIO.out().println("Забрано: "+item.getName());
+                }
+                selected.clear(); GameIO.sound(GameSound.BAG); continue;
+            }
             if (n < 1 || n > remaining.size()) { GameIO.out().println("Неверный номер."); continue; }
-            ItemInfo item = remaining.get(n - 1);
-            if (!fighter.addItem(item)) { GameIO.sound(GameSound.ERROR);GameIO.out().println("Больше 25 кг не унести. Освободите место или выберите другое."); continue; }
-            GameIO.sound(GameSound.BAG);remaining.remove(n - 1);
-            GameIO.out().println("Забрано: " + item.getName());
+            if (!selected.add(n-1)) selected.remove(n-1);
         }
     }
     static boolean repair(Fighter fighter, ItemInfo target) {

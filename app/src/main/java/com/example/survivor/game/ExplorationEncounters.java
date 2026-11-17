@@ -31,7 +31,7 @@ final class ExplorationEncounters {
     }
     static boolean tryEncounter(Fighter player, Locations locations, Location place, Scanner scanner, Random random) {
         if(!player.isAlive())return false;
-        WorldStories clock=locations.getStories();int stage=locations.explorationStage(locations.getNumber(place));
+        WorldStories clock=locations.getStories();clock.chanceMeetings().maybe(player,clock,locations.getNumber(place),scanner,random);if(!player.isAlive())return false;int stage=locations.explorationStage(locations.getNumber(place));
         int roll=random.nextInt(100),base=Difficulty.encounterChance(baseChance(locations,place,clock.isNight()),player.difficulty());
         int total=Difficulty.encounterChance(chance(locations,place,clock.isNight()),player.difficulty());
         if(roll>=total)return true;

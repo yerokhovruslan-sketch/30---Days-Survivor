@@ -17,7 +17,7 @@ final class OpeningChapter {
   GameIO.action(1,"Вступить в бой",p.difficulty()==3?"Опасный бой: три заражённых · смерть завершит попытку":"Опасный бой: три заражённых · можно уйти и продолжить игру");GameIO.action(0,"Уйти","Оставить вещи в комнате");
   int door=SurvivalSystems.choice(in);
   if(door==1){
-   boolean won=TacticalBattle.story(p,in,random,List.of(new Zombie(1,ZombieType.NORMAL),new Zombie(2,ZombieType.NORMAL),new Zombie(3,ZombieType.NORMAL)),"Начало: комната",List.of(),false,false,false);
+   boolean won=TacticalBattle.story(p,in,random,List.of(new Zombie(1,ZombieType.NORMAL),new Zombie(2,ZombieType.NORMAL),new Zombie(3,ZombieType.NORMAL)),"Начало: комната",List.of(),false,false,false,true);
    w.clearPendingBattle(w.currentPlace());
    if(!p.isAlive())return false;
    if(won){boolean food=false,bag=backpack,pistol=false;

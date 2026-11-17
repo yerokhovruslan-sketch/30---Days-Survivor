@@ -10,6 +10,7 @@ final class AmbientPlan {
   if(city && n<30)return Cue.CITY;
   return n<(city?50:25)?Cue.WIND:Cue.NONE;
  }
+ static Cue forestCue(Random random,boolean night){return night?Cue.FOREST:random.nextInt(100)<70?Cue.WIND:Cue.CROW;}
  static int resource(Cue cue){return switch(cue){case WIND->R.raw.map_wind;case NIGHT_TENSION->R.raw.ambient_night_tension;case CROW->R.raw.ambient_crow_single;case FLOCK->R.raw.ambient_crows_flock;case FOREST->R.raw.ambient_forest_night;case CITY->R.raw.ambient_city_day;default->0;};}
  static float volume(Cue cue){return switch(cue){case WIND->.08f;case CROW,FLOCK->.18f;default->.16f;};}
 }

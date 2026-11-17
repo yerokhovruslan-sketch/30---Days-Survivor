@@ -36,7 +36,7 @@ final class School implements Serializable {
         }
     }
     void visit(Fighter p,Location place,WorldStories world,Scanner scanner,Random random){
-        migrate(place);
+        migrate(place);boolean veraRolled=false;
         while(p.isAlive()){
             GameIO.menu("Школа","Перевёрнутые скамейки, брошенные вещи и тихие коридоры. Некоторые двери заперты; из дальней части столовой слышится движение.");
             GameIO.point(1,"Вестибюль","Стойка, доска объявлений и шкаф для ключей",desk&&board&&houseKey);
@@ -60,12 +60,19 @@ final class School implements Serializable {
                     if(a==2&&!board&&time(p,world,5,1)){board=true;note(world,"Объявление школы","Группа Б остаётся в здании до прибытия второго транспорта.");}
                     if(a==3&&!houseKey&&time(p,world,5,1)&&take(p,new Tools(HOUSE_KEY,"Подписанный ключ от хозяйственного кабинета школы.",1,0))){houseKey=true;mark(world);}
                 }else if(section==2){
+                    VeraStory vera=world.vera();
+                    if(!veraRolled && !vera.appeared && (!classDiary || !classroomLoot || !medKey)){veraRolled=true;vera.trySpawn(random);}
                     compareDiary(world);
                     GameIO.menu("Учебный класс","Парты сдвинуты к стенам. На доске осталась дата последнего учебного дня, в шкафах — тетради и личные вещи.");
                     GameIO.action(1,"Прочитать дневник на парте",classDiary?"Дневник прочитан":"10 минут",!classDiary);
                     GameIO.action(2,"Обыскать шкафы",classroomLoot?"Уже осмотрены":"10 минут · бытовые вещи",!classroomLoot);
-                    GameIO.action(3,"Взять найденный ключ",medKey?"Уже взят":"Ключ от медкабинета",!medKey);GameIO.action(0,"Назад");
+                    GameIO.action(3,"Взять найденный ключ",medKey?"Уже взят":"Ключ от медкабинета",!medKey);
+                    if(vera.available())GameIO.action(10,"Дверь в подсобное помещение","Из комнаты слышен женский голос");
+                    if(vera.cabinetAvailable())GameIO.action(11,"Подсобка в конце коридора","Ключ или лом открывает дверь");
+                    GameIO.action(0,"Назад");
                     int a=SurvivalSystems.choice(scanner);if(a==0)break;
+                    if(a==10 && vera.available() && !vera.interact(p,world,scanner,random))return;
+                    if(a==11 && vera.cabinetAvailable())vera.cabinet(p,world,scanner);
                     if(a==1&&!classDiary&&time(p,world,10,2)){classDiary=true;note(world,"Дневник школьника","Учитель сказал, что завтра нас заберут. Мама обещала ждать возле ворот.");compareDiary(world);}
                     if(a==2&&!classroomLoot&&time(p,world,10,2)&&take(p,Shop.createItem(48))){classroomLoot=true;mark(world);}
                     if(a==3&&!medKey&&time(p,world,5,1)&&take(p,new Tools(MED_KEY,"Ключ от медицинского кабинета школы.",1,0))){medKey=true;mark(world);}

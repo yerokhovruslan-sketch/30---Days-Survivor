@@ -48,6 +48,12 @@ final class BattleLayout {
   Collections.shuffle(anchors,b.random);
   for(int cell:anchors){if(count(b)>=target)break;tryPlace(b,cell,scene.nearby[b.random.nextInt(scene.nearby.length)],false,enemies);}
  }
+ static void ensureCar(TacticalBattle b,int enemies){
+  for(TacticalBattle.Obstacle obstacle:b.obstacles)if(obstacle==TacticalBattle.Obstacle.CAR)return;
+  for(int cell:candidates())if(tryPlace(b,cell,TacticalBattle.Obstacle.CAR,false,enemies)||tryPlace(b,cell,TacticalBattle.Obstacle.CAR,true,enemies))return;
+  b.clearObstacles();
+  for(int cell:candidates())if(tryPlace(b,cell,TacticalBattle.Obstacle.CAR,false,enemies)||tryPlace(b,cell,TacticalBattle.Obstacle.CAR,true,enemies))return;
+ }
  private static int count(TacticalBattle b){int n=0;for(int i=0;i<64;i++)if(b.obstacles[i]!=null&&b.obstaclePart(i)==0)n++;return n;}
  private static void addAround(TacticalBattle b,int center,TacticalBattle.Obstacle[] types,int requested,int enemies){
   List<Integer> ring=new ArrayList<>();int span=b.obstacleSpan(center),step=b.obstacleIsVertical(center)?8:1;

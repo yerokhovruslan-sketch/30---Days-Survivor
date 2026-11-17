@@ -66,6 +66,8 @@ public final class HomeHud extends LinearLayout {
         deadline.setText(left>0?"До 31-го дня: "+(left/1440)+" дн. "+((left%1440)/60)+" ч.":"31-й день наступил");
         balance.setText("Баланс: "+f.balance+" $");
         stamina.set(f.stamina,100);sleep.set(f.sleepiness,100);hunger.set(f.hunger,100);noise.set(f.noise,60);
+        temperature.value.setText(f.status.temperature);
+        temperature.bar.setProgress("Холодно".equals(f.status.temperature) ? 100 : "Зябко".equals(f.status.temperature) ? 50 : 0);
     }
     private Metric metric(String title,int icon,int max,boolean large){
         LinearLayout outer=row();outer.setGravity(Gravity.CENTER_VERTICAL);outer.setPadding(0,dp(large?15:12),dp(large?0:7),dp(large?15:8));

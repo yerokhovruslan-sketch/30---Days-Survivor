@@ -8,6 +8,8 @@ import java.util.Scanner;
 final class ShelterUpgrades implements Serializable {
     private static final long serialVersionUID = 1L;
     int bed, bench, radio, completed;
+    ItemInfo pillow, blanket, sheet;
+    long fireUntil;
     int anvil;
     boolean accepted;
     int signalAttempts, signalStage;

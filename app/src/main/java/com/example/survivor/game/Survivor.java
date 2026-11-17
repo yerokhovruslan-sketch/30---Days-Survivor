@@ -17,6 +17,11 @@ class SurvivorInfo implements java.io.Serializable {
     private int hunger = 0;
     private int sleepiness = 0;
     private int noise = 0;
+    private int coldExposure, coldRemainder;
+    String coldState(){return coldExposure>=60?"Холодно":coldExposure>=25?"Зябко":"Комфортно";}
+    void updateCold(int minutes, boolean cold, boolean sheltered){int protection=this instanceof Fighter?((Fighter)this).warmth():0;int rate=sheltered?-100:cold?Math.max(0,100-protection):-50;int total=coldRemainder+Math.max(0,minutes)*rate;coldExposure=Math.max(0,Math.min(100,coldExposure+total/300));coldRemainder=(coldExposure==0 && total<0 || coldExposure==100 && total>0)?0:total%300;}
+
+
     private int campaignDifficulty;
     // Hundredths survive saves; old saves default to zero.
     private int hungerRemainder, sleepinessRemainder;
@@ -49,12 +54,13 @@ class SurvivorInfo implements java.io.Serializable {
     public int getAccuracyPenalty() { return hunger / 3 + sleepiness / 4; }
     public int getStunChance() { return Math.min(45, hunger / 4 + sleepiness / 5); }
     public boolean spendStamina(int amount) {
+        if (amount > 0 && coldState().equals("Холодно")) amount += Math.max(1,amount/10);
         if (amount < 0 || amount > stamina) return false;
         stamina -= amount;
         return true;
     }
     public void restoreStamina(int amount) {
-        if (amount > 0 && isAlive()) stamina = Math.min(maxStamina, stamina + Math.max(1, amount * (100 - sleepiness / 2) / 100));
+        if (amount > 0 && isAlive()) { if(coldState().equals("Холодно")) amount=Math.max(1,amount*80/100); stamina = Math.min(maxStamina, stamina + Math.max(1, amount * (100 - sleepiness / 2) / 100)); }
     }
 
     SurvivorInfo(String name, String description, int health) {
@@ -125,6 +131,11 @@ class Fighter extends SurvivorInfo {
     private final List<ItemInfo> inventory = new ArrayList<>();
     // Missing in old serialized saves: initialize lazily to preserve existing progress.
     private List<ItemInfo> storage = new ArrayList<>();
+    private ItemInfo wornCoat, wornGloves, wornShoes;
+    int clothingSlot(ItemInfo item){String n=item.getName().toLowerCase(java.util.Locale.ROOT);if(n.contains("зимняя куртка")||n.contains("плащ-дождевик"))return 1;if(n.contains("тёплые перчатки")||n.contains("теплые перчатки")||n.contains("кожаные перчатки"))return 2;if(n.equals("прочная обувь"))return 3;return 0;}
+    ItemInfo worn(int slot){ItemInfo i=slot==1?wornCoat:slot==2?wornGloves:wornShoes;return i!=null && getInventory().contains(i)?i:null;}
+    void wearClothing(ItemInfo i){int slot=clothingSlot(i);if(!getInventory().contains(i))return;if(slot==1)wornCoat=worn(1)==i?null:i;else if(slot==2)wornGloves=worn(2)==i?null:i;else if(slot==3)wornShoes=worn(3)==i?null:i;}
+    int warmth(){int result=0;if(worn(1)!=null)result+=worn(1).getName().contains("куртка")?55:15;if(worn(2)!=null)result+=20;if(worn(3)!=null)result+=10;return result;}
     private ShelterUpgrades upgrades;
     public ShelterUpgrades getUpgrades() {
         if (upgrades == null) upgrades = new ShelterUpgrades();
@@ -182,7 +193,7 @@ class Fighter extends SurvivorInfo {
         if (minutes <= 0 || !isAlive()) return;
         poisoningMinutes=Math.max(0,poisoningMinutes-minutes);
         for (BodyInjury wound : injuries().values()) {
-            if (!wound.treated || wound.bleeding > 0 || wound.trauma <= 0) continue;
+            if (wound.bleeding > 0 || wound.trauma <= 0 || !wound.treated && wound.trauma >= 30) continue;
             long total = (long) wound.recoveryMinutes + (difficulty()==1 ? minutes*3L/2 : minutes);
             int restored = (int)Math.min(wound.trauma, total / 60);
             wound.trauma -= restored;
@@ -194,6 +205,7 @@ class Fighter extends SurvivorInfo {
         if (injuries == null) injuries = new java.util.EnumMap<>(BodyPart.class);
         return injuries;
     }
+    void storyInjury(BodyPart part,int severity){BodyInjury w=injury(part);w.trauma=Math.max(0,Math.min(99,severity));w.treated=false;}
     private BodyInjury injury(BodyPart part) {
         return injuries().computeIfAbsent(part, ignored -> new BodyInjury(0, 0));
     }
@@ -355,8 +367,9 @@ class Fighter extends SurvivorInfo {
         for (BodyPart part : injuredParts()) {
             int t = trauma(part), b = bleed(part);
             String condition = t >= 65 ? "тяжёлая травма" : t >= 30 ? "ранение" : "ушиб";
-            result.append(part.label).append(": ").append(condition);
+            result.append(part.label).append(": ").append(condition).append(" · состояние ").append(100-t).append("/100");
             if (b > 0) result.append(" · кровотечение ").append(b).append("/5");
+            else if (t > 0 && t < 30) {long remaining=Math.max(0,t*60L-injury(part).recoveryMinutes);double days=remaining/(difficulty()==1?2160.0:1440.0);result.append(String.format(java.util.Locale.ROOT," · заживёт самостоятельно примерно за %.1f дн.",Math.max(0.1,Math.ceil(days*10)/10)));}
             else if (t > 0) result.append(injury(part).treated ? " · заживает" : " · требуется обработка");
             result.append('\n');
         }
@@ -366,9 +379,10 @@ class Fighter extends SurvivorInfo {
         if (legsTrauma() > 0) result.append("Ноги: движение и отход требуют больше сил.\n");
         return result.toString().trim();
     }
-    String treat(BodyPart part, MedicalItem medicine) {
+    boolean requiresTreatment(BodyPart part){return bleed(part)>0 || trauma(part)>=30 && !injury(part).treated;}
+    String treat(BodyPart part, ItemInfo medicine) {
         BodyInjury wound = injury(part);
-        boolean bandage = medicine.getName().toLowerCase(java.util.Locale.ROOT).contains("бинт");
+        boolean bandage = medicine.getName().toLowerCase(java.util.Locale.ROOT).contains("бинт") && !medicine.getName().equals("Кровоостанавливающий бинт");
         wound.bleeding = Math.max(0, wound.bleeding - (bandage ? 3 : 5));
         wound.treated = true;
         wound.recoveryMinutes = 0;
@@ -526,6 +540,7 @@ class Zombie extends CombatEnemy {
 }
 
 class MedicalItem extends ItemInfo {
+    static boolean supports(ItemInfo item){if(item instanceof MedicalItem)return true;return switch(item.getName()){case "Кровоостанавливающий бинт","Эластичный бинт","Стерильная повязка","Перевязочный комплект","Медицинский набор","Марлевые салфетки","Антисептик","Набор пластырей"->true;default->false;};}
     private static final long serialVersionUID = 1L;
     private final int healing;
 
@@ -567,7 +582,7 @@ class Survivor {
     public static void travel(SurvivorInfo player,String message,int steps){travel(player,message,steps,GameIO.footsteps());}
     static void travel(SurvivorInfo player, String message, int steps,GameSound surface) {
         if(message.startsWith("Возвращение") && !GameIO.atHome() && GameIO.clock()!=null && GameIO.clock().currentPlace()==37 && GameIO.clock().routeAfterArchive!=null)GameIO.clock().routeAfterArchive.beforeTerminalExit(GameIO.clock(),GameIO.scanner());
-        if(message.startsWith("Путь к локации:"))GameIO.travelTransition("Ты идёшь");
+        if(message.startsWith("Путь к локации:") || message.equals("Путь в магазин"))GameIO.travelTransition(message.equals("Путь в магазин")?"Ты идёшь в магазин":"Ты идёшь");
         else if(message.startsWith("Возвращение"))GameIO.travelTransition("Ты возвращаешься домой");
         if (player instanceof Fighter) ((Fighter) player).spendAvailableStamina(steps);
         else player.spendStamina(Math.min(steps, player.getStamina()));
@@ -698,9 +713,16 @@ class Survivor {
         }
         if(fighter.getEquippedWeapon()==null)GameIO.selectedAction(-1,"Кулаки","Уже экипировано",false);
         else GameIO.action(-1, "Кулаки", "Убрать оружие");
+        GameIO.action(-2,"Броня","Шлем и защита корпуса");
+        GameIO.action(-5,"Одежда","Можно носить вместе с бронёй");
+        if(GameIO.atHome()){GameIO.action(-3,"Содержимое рюкзака");GameIO.action(-4,"Разгрузить рюкзак");}
         GameIO.action(0, "Отмена");
         int choice = scanner.nextInt();
         if (choice == 0) return false;
+        if(choice == -2){SurvivalSystems.armorMenu(fighter,scanner);return true;}
+        if(choice == -5){HomeComfort.clothing(fighter,scanner);return true;}
+        if(choice == -3 && GameIO.atHome()){GameIO.menu("Инвентарь","Всё, что Джон несёт с собой");for(ItemInfo item:fighter.getInventory())GameIO.card(item.getName(),item.getDescription());GameIO.action(0,"Назад");SurvivalSystems.choice(scanner);return false;}
+        if(choice == -4 && GameIO.atHome()){SurvivalSystems.backpack(fighter,scanner);return false;}
         if (choice < -1 || choice > weapons.size()) {
             GameIO.out().println("Неверный номер.");
             return false;
@@ -763,14 +785,14 @@ class Survivor {
     public static boolean inspectBody(Fighter fighter, Scanner scanner) {
         GameIO.menu("Осмотреть тело", "Раны влияют на бой, а кровотечение отнимает здоровье после хода врагов.");
         GameIO.illustratedCard("Состояние Джона", fighter.injurySummary(), "body:" + fighter.bodyDiagramData());
-        List<MedicalItem> medicines = new ArrayList<>();
-        for (ItemInfo item : fighter.getInventory()) if (item instanceof MedicalItem) medicines.add((MedicalItem) item);
+        List<ItemInfo> medicines = new ArrayList<>();
+        for (ItemInfo item : fighter.getInventory()) if (MedicalItem.supports(item)) medicines.add(item);
         if (medicines.isEmpty()) {
             GameIO.action(0, "Назад", "Нет бинтов или аптечек");
             scanner.nextInt();
             return false;
         }
-        if (!fighter.hasInjuries()) {
+        if (fighter.injuredParts().stream().noneMatch(fighter::requiresTreatment)) {
             GameIO.action(0, "Назад", "Ран, требующих обработки, нет");
             scanner.nextInt();
             return false;
@@ -781,7 +803,7 @@ class Survivor {
         if (!scanner.hasNextInt()) { if (scanner.hasNext()) scanner.next(); return false; }
         int medicineChoice = scanner.nextInt();
         if (medicineChoice < 1 || medicineChoice > medicines.size()) return false;
-        List<BodyPart> parts = fighter.injuredParts();
+        List<BodyPart> parts = fighter.injuredParts().stream().filter(fighter::requiresTreatment).collect(java.util.stream.Collectors.toList());
         GameIO.menu("Куда наложить средство?", "Выберите повреждённую часть тела.");
         for (int i = 0; i < parts.size(); i++) {
             BodyPart part = parts.get(i);
@@ -792,7 +814,7 @@ class Survivor {
         if (!scanner.hasNextInt()) { if (scanner.hasNext()) scanner.next(); return false; }
         int partChoice = scanner.nextInt();
         if (partChoice < 1 || partChoice > parts.size()) return false;
-        MedicalItem medicine = medicines.get(medicineChoice - 1);
+        ItemInfo medicine = medicines.get(medicineChoice - 1);
         String result = fighter.treat(parts.get(partChoice - 1), medicine);
         fighter.getInventory().remove(medicine);
         GameIO.out().println("Использован предмет: " + medicine.getName() + ". " + result);
@@ -1000,7 +1022,7 @@ class Survivor {
         if (discovery == null) {
             ItemInfo found = point == null ? Item.createItems(location, random, mode.lootBonus)
                     : location.searchPoint(point, random, mode.lootBonus + Difficulty.loot(GameIO.difficulty()));
-            if (found != null) SurvivalSystems.collect(player, java.util.Arrays.asList(found), scanner);
+            if (found != null) {List<ItemInfo> finds=JunkLoot.items(location,point,found,random);if(finds.isEmpty())GameIO.out().println("При обыске ничего не найдено.");else SurvivalSystems.collect(player,finds,scanner);}
         } else {
             // A narrative discovery occupies one search site too; it is not a free extra loot roll.
             if (point == null) location.searchSupplies(random); else location.consumePoint(point);
@@ -1445,7 +1467,7 @@ class Survivor {
                         travel(selectedSurvivor,"Возвращение домой",5);
                         continue;
                     }
-                    if (!returnedToBattle && locationNumber >= 4 && locationNumber <= 8 && selectedSurvivor instanceof Fighter) {
+                    if (!returnedToBattle && (locationNumber >= 4 && locationNumber <= 8 || locationNumber>=10 && locationNumber<=12) && selectedSurvivor instanceof Fighter) {
                         boolean safe = ExplorationEncounters.tryEncounter((Fighter)selectedSurvivor, locations, destination, scanner, ThreadLocalRandom.current());
                         if (!selectedSurvivor.isAlive()) { running=false; continue; }
                         if (!safe) { travel(selectedSurvivor,"Возвращение после встречи",5); continue; }
@@ -1521,7 +1543,7 @@ class Survivor {
                             if(forestChoice==0)continue;
                         }
                         if(locations.getNumber(destination)==16){PoliceArchive.enter((Fighter)selectedSurvivor,locations.getStories(),scanner,ThreadLocalRandom.current());travel(selectedSurvivor,"Возвращение из участка",5);break;}
-                        if (destination.isDepleted() && !locations.getStories().monsterDens().accessible(locations.getNumber(destination))) {
+                        if (destination.isDepleted() && !locations.getStories().monsterDens().accessible(locations.getNumber(destination)) && !locations.getStories().arkady().atPlace(locations.getNumber(destination))) {
                             locations.getStories().findArchiveKey((Fighter)selectedSurvivor,locations.getNumber(destination));
                             if(locations.getNumber(destination)==15 && PoliceArchive.unlocked((Fighter)selectedSurvivor)) {
                                 GameIO.storyMenu("Полицейский участок","Обычные запасы исчерпаны. Архив доступен отдельно.");GameIO.action(1,"Попасть в архив");GameIO.action(0,"Вернуться домой");
@@ -1668,9 +1690,7 @@ class Survivor {
             } else if (action1 == 9) {
                 useFood(selectedSurvivor, scanner);
             } else if (action1 == 10) {
-                int healed = ShelterUpgrades.sleep((Fighter) selectedSurvivor, locations.getStories());
-                if (healed < 0) GameIO.out().println("Спать можно только при сонливости выше 40. Сейчас: " + selectedSurvivor.getSleepiness() + "/100.");
-                else GameIO.out().println("Сон 8 часов. Обработанные раны без кровотечения заживают. Сонливость: 0, выносливость восстановлена, голод +10.");
+                HomeComfort.menu((Fighter)selectedSurvivor,locations.getStories(),scanner);
             } else if (action1 == 18) {
                 locations.getStories().homeSurvivors().menu(locations.getStories(),scanner);
             } else if (action1 == 17) {

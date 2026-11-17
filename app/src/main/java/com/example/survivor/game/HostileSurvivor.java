@@ -20,6 +20,16 @@ class HostileSurvivor extends CombatEnemy {
         if(health<55)takeDamage(55-health);
     }
 
+    HostileSurvivor(String name, Weapons weapon, int maximumHealth, boolean defensive) {
+        super(name,"Защищает ребёнка",maximumHealth);this.raider=false;this.weapon=weapon;
+        ammunition=null;backup=null;armor=null;loot.add(weapon);
+    }
+    HostileSurvivor(String name, Weapons weapon, int health, int rounds) {
+        super(name,"Вооружённый водитель",health);this.raider=false;this.weapon=weapon;
+        this.ammunition=new Ammunition(AmmoType.REVOLVER,rounds);this.backup=null;this.armor=null;
+        loot.add(weapon);loot.add(ammunition);loot.add(new Tools("Старая фотография","Личная фотография Аркадия.",1,0));
+    }
+    int roundsRemaining(){return remainingAmmo();}
     HostileSurvivor(int number, boolean raider, Random random) {
         this(number,raider,random,false);
     }

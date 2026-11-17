@@ -176,13 +176,21 @@ final class MenuRenderer {
             LinearLayout body = column();
             body.setBackgroundResource(R.drawable.information_panel);
             body.setPadding(dp(14), dp(14), dp(14), dp(14));
+            if (card.image != null && card.image.startsWith("body-npc:")) {
+                append(cards,bodyDiagram(card.image.substring("body-npc:".length())),12);
+                body.addView(text(card.title,18,INK,true));body.addView(text(card.detail,14,MUTED,false));append(cards,body,12);continue;
+            }
+            if ("bed_comfort".equals(card.image)) {
+                append(cards,bedDiagram(),12); continue;
+            }
             if (card.image != null && card.image.startsWith("body:")) {
-                body.addView(bodyDiagram(card.image.substring("body:".length())),
-                        new LinearLayout.LayoutParams(-1, dp(420)));
+                append(cards,bodyDiagram(card.image.substring("body:".length())),12);
+                append(cards,healthDetails(frame,card.detail),12);
+                continue;
             } else {
             String imageKey = card.image != null && card.image.startsWith("location_hero:")
                     ? card.image.substring("location_hero:".length()) : card.image;
-            int artwork = locationArtwork(imageKey);
+            int artwork = "bed_comfort".equals(imageKey) ? R.drawable.bed_comfort : locationArtwork(imageKey);
             if (artwork != 0) {
                 ImageView picture = new ImageView(context);
                 picture.setImageResource(artwork);
@@ -232,6 +240,10 @@ final class MenuRenderer {
                 AppCompatButton action = button(choice.label, choice.detail,
                         choice.selected, choice.enabled, () -> listener.action(choice.number));
                 if(choice.selected)action.setAlpha(1f);
+                if(choice.selected && ("Находки".equals(frame.menu.title) || "Продажа партией".equals(frame.menu.title))) {
+                    android.graphics.drawable.Drawable check=context.getDrawable(R.drawable.difficulty_icon_selected).mutate();
+                    check.setBounds(0,0,dp(24),dp(24)); action.setCompoundDrawablesRelative(null,null,check,null);
+                }
                 if ("point_searched".equals(choice.artwork)) action.setAlpha(choice.enabled ? .48f : .35f);
                 int background=MenuArtwork.route(choice.artwork);
                 if(background!=0) {MenuArtwork.apply(action,background);action.setMinHeight(dp(84));}
@@ -333,6 +345,7 @@ final class MenuRenderer {
         TextView needs = text(context.getString(R.string.player_needs_format, frame.hunger, frame.sleepiness, frame.noise), 12, MUTED, false);
         needs.setPadding(0, dp(8), 0, dp(8));
         survivor.addView(needs);
+        survivor.addView(text("Температура: "+frame.status.temperature, 12, MUTED, false));
         survivor.addView(text(frame.status.weapon, 13, INK, true));
         if (!frame.status.ammo.isEmpty()) survivor.addView(text(frame.status.ammo, 12, MUTED, false));
         LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, -2, 1);
@@ -377,6 +390,39 @@ final class MenuRenderer {
         slot.addView(gear);
     }
 
+    private View healthDetails(GameSession.Frame frame,String details) {
+        LinearLayout panel=column();panel.setBackgroundResource(R.drawable.information_panel);panel.setPadding(dp(12),dp(12),dp(12),dp(12));
+        LinearLayout heading=new LinearLayout(context);heading.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView heart=new ImageView(context);heart.setImageResource(R.drawable.health_heart);android.graphics.ColorMatrix heartTone=new android.graphics.ColorMatrix();heartTone.setSaturation(0);heart.setColorFilter(new android.graphics.ColorMatrixColorFilter(heartTone));heart.setScaleType(ImageView.ScaleType.FIT_CENTER);heading.addView(heart,new LinearLayout.LayoutParams(dp(36),dp(36)));
+        TextView title=text("СОСТОЯНИЕ ДЖОНА",17,INK,true);title.setPadding(dp(8),0,0,0);heading.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        heading.addView(text(frame.health+"/"+frame.maxHealth,19,Color.WHITE,true));panel.addView(heading);
+        TextView injuriesTitle=text("ТРАВМЫ И СОСТОЯНИЕ",13,0xffbfb2a1,true);injuriesTitle.setPadding(0,dp(12),0,dp(4));panel.addView(injuriesTitle);
+        boolean showingEffects=false;
+        for(String line:details.split("\n")){
+            if(line.trim().isEmpty())continue;
+            boolean effect=line.contains(": ниже") || line.startsWith("Ноги: движение");
+            if(effect && !showingEffects){TextView sub=text("ЭФФЕКТЫ ТРАВМ",13,0xffbfb2a1,true);sub.setPadding(0,dp(12),0,dp(4));panel.addView(sub);showingEffects=true;}
+            int icon=effect?(line.startsWith("Голова")?R.drawable.health_aim:line.startsWith("Тело")?R.drawable.health_weight:line.startsWith("Ноги")?R.drawable.health_run:R.drawable.health_hand):line.startsWith("Голова")?R.drawable.health_head:line.startsWith("Тело")?R.drawable.health_torso:line.contains("рука")||line.startsWith("Руки")?R.drawable.health_hand:line.contains("нога")||line.startsWith("Ноги")?R.drawable.health_leg:R.drawable.health_bandage;
+            LinearLayout row=new LinearLayout(context);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(4),0,dp(4));
+            ImageView image=new ImageView(context);image.setImageResource(icon);row.addView(image,new LinearLayout.LayoutParams(dp(27),dp(27)));
+            TextView value=text(line,14,INK,false);value.setPadding(dp(8),0,0,0);row.addView(value,new LinearLayout.LayoutParams(0,-2,1));panel.addView(row);
+        }
+        return panel;
+    }
+
+    private View bedDiagram() {
+        FrameLayout frame=new FrameLayout(context);
+        frame.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(340)));
+        ImageView image=new ImageView(context); image.setImageResource(R.drawable.bed_comfort); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        frame.addView(image,new FrameLayout.LayoutParams(-1,-1));
+        String[] labels={"Подушка","Одеяло","Простыня"};float[] positions={.23f,.49f,.72f};
+        for(int i=0;i<3;i++) { final int number=i+1; TextView mark=text("+",24,Color.WHITE,true); mark.setGravity(Gravity.CENTER);mark.setBackground(box(0xDD292929,0xFFE0C8A6));mark.setContentDescription(labels[i]);
+            FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(42),dp(42));lp.gravity=Gravity.TOP|Gravity.CENTER_HORIZONTAL;lp.topMargin=(int)(dp(340)*positions[i]);frame.addView(mark,lp);
+            mark.setOnClickListener(v->{if(TapFeedback.run(v,()->listener.action(number)))listener.click();});
+        }
+        return frame;
+    }
+
     /** Builds the supplied transparent body PNG and stacks one blood overlay per injured zone. */
     private View bodyDiagram(String encoded) {
         FrameLayout diagram = new FrameLayout(context);
@@ -386,6 +432,7 @@ final class MenuRenderer {
         body.setScaleType(ImageView.ScaleType.FIT_CENTER);
         body.setContentDescription("Схема травм Джона");
         diagram.addView(body, new FrameLayout.LayoutParams(-1, -1));
+        diagram.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(420)));
         if (encoded == null || encoded.isEmpty()) return diagram;
 
         for (String entry : encoded.split(";")) {

@@ -36,4 +36,10 @@ public class MusicPlanTest {
   assertTrue(tracks.contains("wanderer"));assertTrue(tracks.contains("ashfall"));assertTrue(tracks.contains("elegy"));assertTrue(tracks.contains("houslast"));assertTrue(tracks.size()>5);
   p.opening(0);assertEquals("houslast",p.track);c.area=MusicPlan.Area.CITY;p.update(c,1,2);assertEquals("houslast",p.track);
  }
+ @Test public void backgroundRotationIncludesPreviouslyRareTracksAndNoMissingBattleFile(){
+  MusicPlan p=new MusicPlan(new Random(42));p.context=state(MusicPlan.Area.HOME);Set<String> tracks=new HashSet<>();
+  for(int i=0;i<500;i++){p.pick(i);tracks.add(p.track);}assertTrue(tracks.containsAll(Arrays.asList("digital","light","decay","bunker","graveyard","concrete","dreams")));assertTrue(tracks.size()>=14);
+  MusicPlan.Context c=state(MusicPlan.Area.CITY);c.combat=true;c.enemies=6;
+  for(int i=0;i<60;i++){long now=i*200000L;p.update(c,now,i*2+1);assertNotEquals("wasteland",p.track);c.combat=false;p.update(c,now+10000,i*2+2);c.combat=true;}
+ }
 }

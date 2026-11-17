@@ -24,7 +24,7 @@ final class QuietCourtyard implements Serializable {
         world.advanceMinutes(minutes); return true;
     }
     void visit(Fighter p, Location location, WorldStories world, Scanner scanner, Random random) {
-        ResidentialStories stories=world.residential();SemenStory semen=world.semen();semen.beginVisit();
+        ResidentialStories stories=world.residential();SemenStory semen=world.semen();semen.beginVisit();boolean arkadyRolled=false;
         while (p.isAlive()) {
             GameIO.menu("Тихий двор", "Ветер качает ржавые качели. У подъездов слышны редкие звуки. Выберите место для осмотра.");
             GameIO.point(1,"Детская площадка","Рюкзак и коробка под скамейкой",backpack&&note);
@@ -53,6 +53,8 @@ final class QuietCourtyard implements Serializable {
                     if(a==3&&!firstAidTaken&&time(p,world,5,2)&&take(p,Shop.createItem(1))){firstAidTaken=true;GameIO.checkpoint();}
                     if(a==2 && !note && time(p,world,5,2)) {note=true;world.note("Записка на площадке","Папа сказал ждать его возле красной машины.");GameIO.out().println("В коробке записка: «Папа сказал ждать его возле красной машины».");take(p,Shop.createItem(19));mark(location,world,"Детская площадка");}
                 } else if(choice==2) {
+                    ArkadyStory arkady=world.arkady();
+                    if(!arkadyRolled && !arkady.spawned && (!car || !trunk || !lockedTrunk)){arkadyRolled=true;arkady.trySpawn(random,1);}
                     if(!semen.semen_met)semen.firstMeeting(p,world,scanner);
                     GameIO.menu("Припаркованные автомобили","Два автомобиля брошены, один закрыт. Красная машина стоит у дома.");
                     GameIO.action(1,"Осмотреть салон",car?"Уже осмотрен":"10 минут",!car);
@@ -66,7 +68,9 @@ final class QuietCourtyard implements Serializable {
                         GameIO.action(8,"Разговор по душам",SemenHeartTalk.hint(semen,world),SemenHeartTalk.available(semen,world));
                         if(semen.semen_story_completed&&!semen.semen_trust_lost && semen.heartStage>=5)GameIO.action(9,"Предложить Семёну пойти вместе домой");
                     }
+                    if(arkady.atPlace(1))GameIO.action(10,"Машина с человеком внутри",arkady.finished()?"Мужчина остаётся в машине":"У автомобиля слышно движение");
                     GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
+                    if(a==10&&arkady.atPlace(1)){if(!arkady.interact(p,world,scanner,random))return;}
                     if(a==1&&!car&&time(p,world,10,2)&&take(p,new Food("Бутылка минеральной воды","Чистая питьевая вода",1,4,0))){car=true;mark(location,world,"Припаркованные автомобили");}
                     if(a==2&&!trunk&&time(p,world,10,2)&&take(p,Shop.createItem(48))){trunk=true;mark(location,world,"Припаркованные автомобили");}
                     if(a==3&&!lockedTrunk&&location.hasCrowbar(p)&&time(p,world,10,3)&&take(p,Shop.createItem(19))){lockedTrunk=true;mark(location,world,"Припаркованные автомобили");if(!BreakIn.attack(p,scanner,random))return;}

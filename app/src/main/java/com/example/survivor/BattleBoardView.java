@@ -16,7 +16,7 @@ final class BattleBoardView extends View {
     private long changedAt,lastEffect;
     private int preview=-1;
     private final java.util.List<Pop> pops=new java.util.ArrayList<>();
-    private static final class Pop {final BattleBoard.Effect effect;final long at;Pop(BattleBoard.Effect e,long at){effect=e;this.at=at;}}
+    private static final class Pop {final BattleBoard.Effect effect;final long at;final BattleBoard.Cell victim;final boolean zombie;Pop(BattleBoard.Effect e,long at,BattleBoard.Cell victim){effect=e;this.at=at;this.victim=victim;zombie=victim!=null && victim.unit>=3 && victim.unit<=7;}}
     private final IntConsumer action;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
     private static final LruCache<Integer,Bitmap> images=new LruCache<Integer,Bitmap>(12*1024) {
@@ -39,8 +39,8 @@ final class BattleBoardView extends View {
         long now=android.os.SystemClock.uptimeMillis();
         if(board.epoch!=next.epoch){previous=null;pops.clear();preview=-1;lastEffect=next.effects.isEmpty()?0:next.effects.get(next.effects.size()-1).id;}
         else {
-            previous=board;int order=0;
-            for(BattleBoard.Effect e:next.effects)if(e.id>lastEffect){pops.add(new Pop(e,now+order++*90L));lastEffect=e.id;}
+            previous=board;
+            for(BattleBoard.Effect e:next.effects)if(e.id>lastEffect){pops.add(new Pop(e,now,board.cells.get(e.cell)));lastEffect=e.id;}
             if(board.playerCell!=next.playerCell || preview>=0 && !next.cells.get(preview).move)preview=-1;
         }
         board=next;changedAt=now;invalidate();
@@ -48,10 +48,10 @@ final class BattleBoardView extends View {
     private BattleBoard.Cell oldUnit(int identity){if(previous==null || identity<0)return null;for(BattleBoard.Cell c:previous.cells)if(c.identity==identity)return c;return null;}
     private RectF figure(BattleBoard.Cell c,long now,float inset){
         RectF result=cell(c.index,inset);BattleBoard.Cell old=oldUnit(c.identity);
-        if(old==null || old.index==c.index || now-changedAt>=240)return result;
+        if(old==null || old.index==c.index || now-changedAt>=400)return result;
         java.util.List<Integer> route=BoardVisuals.path(board,old.index,c.index);
         if(route.size()<2)return result;
-        float progress=Math.min(1,(now-changedAt)/240f)*(route.size()-1);int segment=Math.min(route.size()-2,(int)progress);float fraction=progress-segment;
+        float progress=Math.min(1,(now-changedAt)/400f)*(route.size()-1);int segment=Math.min(route.size()-2,(int)progress);float fraction=progress-segment;
         RectF from=cell(route.get(segment),inset),to=cell(route.get(segment+1),inset);
         result.offset(from.left+(to.left-from.left)*fraction-result.left,from.top+(to.top-from.top)*fraction-result.top);return result;
     }
@@ -86,10 +86,30 @@ final class BattleBoardView extends View {
         return new RectF(x+inset,y+inset,x+size-inset,y+size-inset);
     }
     @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);float size=tile();long now=android.os.SystemClock.uptimeMillis();boolean animating=previous!=null && now-changedAt<260;
+        super.onDraw(canvas);float size=tile();long now=android.os.SystemClock.uptimeMillis();boolean animating=previous!=null && now-changedAt<420;
         paint.setStyle(Paint.Style.FILL);paint.setColor(Color.WHITE);paint.setAlpha(255);
         RectF first=cell(0,0),last=cell(63,0);
         canvas.drawBitmap(bitmap(board.woodFloor?R.drawable.field_wood:board.grassFloor?R.drawable.field_grass:R.drawable.field_asphalt),null,new RectF(first.left,first.top,last.right,last.bottom),paint);
+        for(Pop pop:pops)if(pop.effect.kind.equals("break") && pop.victim!=null && pop.victim.obstacle>=0){
+            long age=now-pop.at;if(age>=0 && age<500){RectF impact=cell(pop.effect.cell,0);int res=obstacles[pop.victim.obstacle];
+                paint.setColor(Color.WHITE);paint.setAlpha(age<220?230:(int)(230*(500-age)/280f));
+                if(res!=0)canvas.drawBitmap(bitmap(res),null,impact,paint);paint.setAlpha(255);
+                if(age>180){float t=(age-180)/320f;paint.setColor(0xffae9c7c);paint.setAlpha((int)(170*(1-t)));
+                    for(int i=0;i<6;i++){double angle=i*2.4;canvas.drawCircle(impact.centerX()+(float)Math.cos(angle)*size*.25f*t,impact.centerY()+(float)Math.sin(angle)*size*.2f*t,Math.max(1,size*.035f*(1-t)),paint);}paint.setAlpha(255);}
+                animating=true;
+            }
+        }
+        // Blood stains remain briefly on the ground, then fade away.
+        for(Pop pop:pops)if(pop.effect.kind.equals("damage") && pop.effect.amount>0 && pop.zombie){
+            long age=now-pop.at;if(age<180 || age>12000)continue;
+            RectF stain=cell(pop.effect.cell,0);paint.setColor(0xff4d090b);paint.setAlpha((int)(125*Math.min(1f,(12000-age)/3000f)));
+            canvas.drawOval(stain.centerX()-size*.13f,stain.bottom-size*.20f,stain.centerX()+size*.13f,stain.bottom-size*.10f,paint);paint.setAlpha(255);animating=true;
+        }
+        for(Pop pop:pops)if(pop.effect.kind.equals("damage") && pop.victim!=null && pop.victim.unit>0 && pop.victim.unit<units.length && now-pop.at<400){
+            boolean alive=false;for(BattleBoard.Cell c:board.cells)if(c.identity==pop.victim.identity){alive=true;break;}
+            if(!alive){long age=now-pop.at;RectF ghost=cell(pop.effect.cell,0);if(age>=180)ghost.offset((float)Math.sin((age-180)/220f*Math.PI*4)*size*.07f,0);
+                paint.setColor(Color.WHITE);paint.setAlpha(age<300?255:(int)(255*(400-age)/100f));canvas.drawBitmap(bitmap(units[pop.victim.unit]),null,ghost,paint);paint.setAlpha(255);animating=true;}
+        }
         drawRoute(canvas);
         if(board.shotTarget>=0){RectF a=cell(board.playerCell,0),b=cell(board.shotTarget,0);paint.setColor(board.shotBlocked?0xffb76058:0xffa6b5aa);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2);paint.setPathEffect(new DashPathEffect(new float[]{7,6},0));canvas.drawLine(a.centerX(),a.centerY(),b.centerX(),b.centerY(),paint);paint.setPathEffect(null);paint.setStyle(Paint.Style.FILL);
             if(board.shotBlocked){float x=(a.centerX()+b.centerX())/2,y=(a.centerY()+b.centerY())/2;canvas.drawLine(x-6,y-6,x+6,y+6,paint);canvas.drawLine(x+6,y-6,x-6,y+6,paint);}}
@@ -127,7 +147,24 @@ final class BattleBoardView extends View {
                 resource=variant==0?R.drawable.field_car:variant==1?R.drawable.field_truck:R.drawable.field_van;
             }
             RectF sprite=c.unit>=0?figure(c,now,0):cell(c.index,0);
+            for(Pop pop:pops){
+                long age=now-pop.at;
+                if(pop.effect.kind.equals("swing") && pop.effect.cell==c.index && age>=0 && age<180){
+                    RectF target=cell(pop.effect.amount,0);float dx=target.centerX()-sprite.centerX(),dy=target.centerY()-sprite.centerY();float len=(float)Math.hypot(dx,dy);
+                    float k=age<120?-.05f*age/120f:.18f*(1-(age-120)/60f);
+                    if(len>0)sprite.offset(dx/len*size*k,dy/len*size*k);animating=true;
+                }
+                if(pop.effect.kind.equals("collision") && pop.effect.cell==c.index && age>=120 && age<600){
+                    RectF obstacleCell=cell(pop.effect.amount,0);float dx=obstacleCell.centerX()-sprite.centerX(),dy=obstacleCell.centerY()-sprite.centerY();float len=(float)Math.hypot(dx,dy);
+                    float t=(age-120)/480f;float bounce=t<.35f?t/.35f:(float)(Math.sin((t-.35f)*Math.PI*3)*(1-t)*.6);
+                    if(len>0)sprite.offset(dx/len*size*.14f*bounce,dy/len*size*.14f*bounce);animating=true;
+                }
+                if(pop.effect.kind.equals("damage") && pop.effect.cell==c.index && age>=180 && age<400){
+                    sprite.offset((float)Math.sin((age-180)/220f*Math.PI*4)*size*.07f*(1-(age-180)/220f),0);animating=true;
+                }
+            }
             for(Pop pop:pops)if(pop.effect.cell==c.index && pop.effect.kind.equals("shake") && now>=pop.at && now-pop.at<220){sprite.offset((float)Math.sin((now-pop.at)/220f*Math.PI*6)*3,0);animating=true;}
+            for(Pop pop:pops)if(pop.effect.cell==c.index && pop.effect.kind.equals("impact") && now-pop.at>=250 && now-pop.at<480){float f=(now-pop.at-250)/230f;sprite.offset((float)Math.sin(f*Math.PI*6)*size*.025f*(1-f),0);animating=true;}
             if(resource!=0){
                 Bitmap picture=bitmap(resource);
                 if(c.unit<0 && c.obstacleSpan>1){
@@ -165,7 +202,9 @@ final class BattleBoardView extends View {
                     paint.setColor(Color.WHITE);paint.setTextSize(size*.23f);canvas.drawText("Д",r.left+size*.17f,r.top+size*.25f,paint);
                 }
                 if(c.unit!=0){paint.setColor(0xff333333);canvas.drawRect(r.left+3,r.bottom-5,r.right-3,r.bottom-2,paint);
-                paint.setColor(0xffff2929);canvas.drawRect(r.left+3,r.bottom-5,r.left+3+(r.width()-6)*c.health/Math.max(1,c.maxHealth),r.bottom-2,paint);}
+                int shownHealth=c.health;BattleBoard.Cell old=oldUnit(c.identity);
+                if(old!=null && old.health>c.health)for(Pop pop:pops)if(pop.effect.kind.equals("damage")&&pop.effect.cell==c.index){long age=now-pop.at;if(age<400){float f=Math.max(0,Math.min(1,(age-180)/220f));shownHealth=Math.round(old.health+(c.health-old.health)*f);break;}}
+                paint.setColor(0xffff2929);canvas.drawRect(r.left+3,r.bottom-5,r.left+3+(r.width()-6)*shownHealth/Math.max(1,c.maxHealth),r.bottom-2,paint);}
             }
             if(c.selected || c.unit==0) {
                 paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(6);paint.setColor(0xff111717);canvas.drawRect(r,paint);
@@ -184,11 +223,18 @@ final class BattleBoardView extends View {
                 canvas.drawLine(r.right-5,r.top+5,r.left+5,r.bottom-5,paint);paint.setStyle(Paint.Style.FILL);
             }
         }
-            pops.removeIf(p->now-p.at>850);
-        for(Pop pop:pops){long age=now-pop.at;if(age<0){animating=true;continue;}if(age>800 || pop.effect.kind.equals("shake"))continue;animating=true;
-            RectF r=cell(pop.effect.cell,0);String value=pop.effect.kind.equals("miss")?"Мимо":pop.effect.kind.equals("stun")?"Оглушён":"−"+pop.effect.amount;
-            paint.setTextSize(size*.34f);paint.setTypeface(Typeface.DEFAULT_BOLD);paint.setTextAlign(Paint.Align.CENTER);paint.setAlpha((int)(255*(1-age/800f)));
-            paint.setColor(pop.effect.kind.equals("damage")?0xffef8c7b:0xffe0ddce);paint.setAlpha((int)(255*(1-age/800f)));paint.setShadowLayer(3,0,1,Color.BLACK);canvas.drawText(value,r.centerX(),r.centerY()-age/800f*size*.45f,paint);paint.clearShadowLayer();paint.setAlpha(255);
+        pops.removeIf(p->now-p.at>12000);
+        for(Pop pop:pops){long age=now-pop.at;if(age<0){animating=true;continue;}if(pop.effect.kind.equals("shake")||pop.effect.kind.equals("swing")||pop.effect.kind.equals("collision")||pop.effect.kind.equals("impact")||pop.effect.kind.equals("break")){if(age<400)animating=true;continue;}
+            RectF r=cell(pop.effect.cell,0);
+            if(pop.effect.kind.equals("damage") && pop.effect.amount>0 && pop.zombie && age>=120 && age<650){
+                float t=(age-120)/530f;paint.setColor(0xffa3141a);paint.setAlpha((int)(255*(1-t)));
+                for(int i=0;i<9;i++){double angle=(i*2.399963+pop.effect.id);float speed=size*(.08f+(i%4)*.045f);float px=r.centerX()+(float)Math.cos(angle)*speed*t*2;
+                    float py=r.centerY()+(float)Math.sin(angle)*speed*t+size*.32f*t*t;canvas.drawCircle(px,py,Math.max(1,size*.025f*(1-t*.5f)),paint);}paint.setAlpha(255);animating=true;
+            }
+            if(age<180 || age>800)continue;animating=true;
+            String value=pop.effect.kind.equals("miss")?"Мимо":pop.effect.kind.equals("stun")?"Оглушён":"−"+pop.effect.amount;
+            paint.setTextSize(size*.34f);paint.setTypeface(Typeface.DEFAULT_BOLD);paint.setTextAlign(Paint.Align.CENTER);
+            paint.setColor(pop.effect.kind.equals("damage")?0xffef8c7b:0xffe0ddce);paint.setAlpha((int)(255*(1-(age-180)/620f)));paint.setShadowLayer(3,0,1,Color.BLACK);canvas.drawText(value,r.centerX(),r.centerY()-(age-180)/620f*size*.45f,paint);paint.clearShadowLayer();paint.setAlpha(255);
         }
         paint.setColor(0xffc6c8bb);paint.setTextSize(11*getResources().getDisplayMetrics().scaledDensity);paint.setTextAlign(Paint.Align.CENTER);
         canvas.drawText(preview<0?"Клетка → маршрут. Повторное нажатие → идти":"Маршрут к "+coordinate(preview)+" · нажмите клетку ещё раз",getWidth()/2f,getWidth()+12*getResources().getDisplayMetrics().density,paint);

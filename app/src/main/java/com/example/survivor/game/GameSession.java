@@ -47,10 +47,11 @@ public final class GameSession implements AutoCloseable {
         public final boolean savesAllowed;
         public final String time;
         public final String difficulty;
-        public final boolean night,home,reading;
+        public final boolean night,home,reading,rain,fire;
         public final int place;
         public final String musicCue;
-        Frame(long revision, Mode mode, String text, SurvivorInfo player, int balance, int day, GameMenu menu, GameStatus status, String time, boolean night, boolean home,int place,boolean reading,String musicCue) {
+        Frame(long revision, Mode mode, String text, SurvivorInfo player, int balance, int day, GameMenu menu, GameStatus status, String time, boolean night, boolean home,int place,boolean reading,String musicCue,boolean rain,boolean fire) {
+            this.rain=rain;this.fire=fire;
             this.revision = revision;
             this.mode = mode;
             this.text = text;
@@ -282,7 +283,7 @@ public final class GameSession implements AutoCloseable {
         catch (java.io.UnsupportedEncodingException impossible) { throw new AssertionError(impossible); }
         if(newRevision)revision++;
         Frame frame = new Frame(revision, mode, text, player, balance, world == null ? 1 : world.getStories().day(),
-                menu.build(), new GameStatus(player, enemies, target), clock() == null ? "08:00" : clock().time(), clock() != null && clock().isNight(),atHome,clock()==null?0:clock().currentPlace(),reading,pendingMusicCue);
+                menu.build(), new GameStatus(player, enemies, target), clock() == null ? "08:00" : clock().time(), clock() != null && clock().isNight(),atHome,clock()==null?0:clock().currentPlace(),reading,pendingMusicCue,clock()!=null && clock().day()%3==0,atHome && player instanceof Fighter && clock()!=null && ((Fighter)player).getUpgrades().fireUntil>ShelterUpgrades.minute(clock()));
         pendingMusicCue="";
         if (mode == Mode.MAIN || mode == Mode.CHOICE) lastWaiting = frame;
         listener.accept(frame);

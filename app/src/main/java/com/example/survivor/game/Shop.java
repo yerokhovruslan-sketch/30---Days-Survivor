@@ -175,13 +175,14 @@ final class Shop {
             if (items.isEmpty()) { GameIO.out().println("Предметов для продажи больше нет."); return balance; }
             GameIO.menu("Продажа", "Выберите вещь для продажи. Баланс: " + balance + " $.");
             for (int i = 0; i < items.size(); i++)
-                GameIO.action(i + 1, "Продать: " + items.get(i).getName(), Economy.salePrice(clock(),items.get(i)) + " $ · " + items.get(i).physicalStats()+(SurvivalSystems.protectedRadioPart(fighter,items.get(i))?" · Джону кажется, этот предмет важен":""),!SurvivalSystems.protectedRadioPart(fighter,items.get(i)));
+                GameIO.action(i + 1, "Продать: " + items.get(i).getName(), (items.get(i) instanceof JunkLoot.JunkItem && ((JunkLoot.JunkItem)items.get(i)).priceCents()%100!=0 ? ((JunkLoot.JunkItem)items.get(i)).shownPrice()+" $ · только партией" : Economy.salePrice(clock(),items.get(i))+" $") + " · " + items.get(i).physicalStats()+(SurvivalSystems.protectedRadioPart(fighter,items.get(i))?" · Джону кажется, этот предмет важен":""),!SurvivalSystems.protectedRadioPart(fighter,items.get(i)));
             GameIO.action(0, "Назад в магазин");
             int number = SurvivalSystems.choice(scanner);
             if (number == 0) return balance;
             if (number < 1 || number > items.size()) { GameIO.out().println("Неверный номер."); continue; }
             ItemInfo item = items.get(number - 1);
             if(SurvivalSystems.protectedRadioPart(fighter,item)){GameIO.out().println("Джону кажется, этот предмет ещё пригодится для основной цели. Он не станет продавать его сейчас.");continue;}
+            if (item instanceof JunkLoot.JunkItem && ((JunkLoot.JunkItem)item).priceCents()%100!=0) { balance=sellFractional(fighter,scanner,balance); continue; }
             long updated = (long) balance + Economy.salePrice(clock(),item);
             if (updated > Integer.MAX_VALUE) { GameIO.out().println("Достигнут предел баланса. Предмет не продан."); continue; }
             items.remove(number - 1);
@@ -193,5 +194,23 @@ final class Shop {
         }
         return balance;
     }
+    static int sellFractional(Fighter fighter, Scanner scanner, int balance) {
+        List<ItemInfo> batch=new ArrayList<>();
+        for (ItemInfo item:fighter.getInventory()) if(item instanceof JunkLoot.JunkItem && ((JunkLoot.JunkItem)item).priceCents()%100!=0) batch.add(item);
+        Set<Integer> selected=new HashSet<>();
+        while(GameIO.hasInput(scanner)) {
+            int cents=0; for(int i:selected)cents+=((JunkLoot.JunkItem)batch.get(i)).priceCents();
+            boolean valid=cents>0 && cents%100==0 && (long)balance+cents/100<=Integer.MAX_VALUE;
+            GameIO.player(fighter); GameIO.menu("Продажа партией", "Выберите предметы. Торговец принимает партию только на целое число долларов.");
+            for(int i=0;i<batch.size();i++) GameIO.item(i+1,batch.get(i),"Забрать: ",true,selected.contains(i));
+            GameIO.action(900,"Продать выбранное",String.format(Locale.ROOT,"Выбрано: %d · сумма %d,%02d $",selected.size(),cents/100,cents%100),valid);
+            GameIO.action(0,"Отмена"); int n=SurvivalSystems.choice(scanner);
+            if(n==0)return balance;
+            if(n==900){ if(!valid){GameIO.sound(GameSound.ERROR);continue;} for(int i:selected)fighter.getInventory().remove(batch.get(i)); balance+=cents/100; GameIO.balance(balance);GameIO.checkpoint();GameIO.sound(GameSound.TRADE);return balance; }
+            if(n>0 && n<=batch.size() && !selected.add(n-1))selected.remove(n-1);
+        }
+        return balance;
+    }
+
 }
 

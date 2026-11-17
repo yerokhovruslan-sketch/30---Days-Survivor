@@ -14,8 +14,8 @@ import java.util.Scanner;
 final class SaveSlots {
  private SaveSlots(){}
  static List<File> all(File current){
-  File[] files=current.getParentFile().listFiles((dir,name)->name.matches("survivor-slot-[0-9]+\\.dat"));
-  List<File> result=new ArrayList<>();if(files!=null)result.addAll(Arrays.asList(files));
+  File[] files=current.getParentFile().listFiles((dir,name)->name.matches("survivor-slot-[0-9]+\\.dat(\\.bak)?"));
+  List<File> result=new ArrayList<>();if(files!=null)for(File file:files){String path=file.getPath();File slot=path.endsWith(".bak")?new File(path.substring(0,path.length()-4)):file;if(!result.contains(slot))result.add(slot);}
   if(GameSave.exists(current))result.add(current);
   result.sort(Comparator.comparingLong(SaveSlots::modified).reversed());return result;
  }
@@ -24,7 +24,7 @@ final class SaveSlots {
   if(!GameSave.exists(current))return;
   // Validate and recover before copying, so a partial file cannot become a slot.
   if(GameSave.load(current).player.difficulty()==3)return;long id=System.currentTimeMillis();File target;
-  do{target=new File(current.getParentFile(),"survivor-slot-"+id+++".dat");}while(target.exists());
+  do{target=new File(current.getParentFile(),"survivor-slot-"+id+++".dat");}while(GameSave.exists(target));
   try(FileInputStream input=new FileInputStream(current);FileOutputStream output=new FileOutputStream(target)){
    byte[] data=new byte[8192];int count;while((count=input.read(data))!=-1)output.write(data,0,count);output.getFD().sync();
   }catch(IOException e){target.delete();throw e;}

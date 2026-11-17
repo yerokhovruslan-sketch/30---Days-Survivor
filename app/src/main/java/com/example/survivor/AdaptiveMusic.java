@@ -118,14 +118,15 @@ final class AdaptiveMusic implements AutoCloseable {
         boolean map=frame.menu.title.equals("Карта локаций") && frame.home;
         boolean fight=frame.menu.board!=null && frame.menu.board.combatActive && !frame.status.enemies.isEmpty();
         boolean quiet=plan.track.isEmpty() && !audible();
-        if(fight || !frame.menu.scene.isEmpty() || (!map && !quiet)){stopAmbient();return;}
+        boolean inForest=!frame.home && (frame.place==2 || frame.place>=19 && frame.place<=26);
+        if(fight || !frame.menu.scene.isEmpty() || (!map && !quiet && !inForest)){stopAmbient();return;}
         if(ambient!=null){if(now>=ambientEnd || !ambient.isPlaying())stopAmbient();else{float fade=Math.min(1f,(ambientEnd-now)/1500f);ambient.setVolume(ambientVolume*fade,ambientVolume*fade);return;}}
         if(now<nextAmbient)return;
-        nextAmbient=now+35000+ambientRandom.nextInt(35001);
+        nextAmbient=now+(inForest?3000:35000)+ambientRandom.nextInt(inForest?4001:35001);
         boolean forest=!frame.home && (frame.place==2 || frame.place>=19 && frame.place<=32);
         boolean city=!frame.home && !forest && (frame.place<35 || frame.place>50);
-        AmbientPlan.Cue cue=AmbientPlan.choose(ambientRandom,frame.night,forest,city,map);int resource=AmbientPlan.resource(cue);if(resource==0)return;
-        try{ambient=MediaPlayer.create(app,resource);if(ambient==null)return;ambientVolume=AmbientPlan.volume(cue);ambient.setVolume(ambientVolume,ambientVolume);
+        AmbientPlan.Cue cue=inForest?AmbientPlan.forestCue(ambientRandom,frame.night):AmbientPlan.choose(ambientRandom,frame.night,forest,city,map);if(inForest && cue==AmbientPlan.Cue.FOREST)cue=AmbientPlan.Cue.WIND;int resource=AmbientPlan.resource(cue);if(resource==0)return;
+        try{ambient=MediaPlayer.create(app,resource);if(ambient==null)return;ambientVolume=inForest?.10f:AmbientPlan.volume(cue);ambient.setVolume(ambientVolume,ambientVolume);
             if(cue==AmbientPlan.Cue.WIND || cue==AmbientPlan.Cue.FOREST || cue==AmbientPlan.Cue.CITY){int d=ambient.getDuration();if(d>30000)ambient.seekTo(ambientRandom.nextInt(d-20000));}
             ambient.start();ambientEnd=now+Math.min(22000,Math.max(1000,ambient.getDuration()-ambient.getCurrentPosition()));
         }catch(RuntimeException error){stopAmbient();}

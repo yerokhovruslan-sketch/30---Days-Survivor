@@ -141,6 +141,10 @@ public class MainActivity extends AppCompatActivity {
             @Override public void click() {game.clickSound();}
             @Override public void unavailable(){game.unavailableSound();}
         }, savedInstanceState);
+        findViewById(R.id.action_status).setVisibility(View.GONE);
+        findViewById(R.id.action_inventory).setVisibility(View.GONE);
+        findViewById(R.id.action_unload).setVisibility(View.GONE);
+        findViewById(R.id.action_armor).setVisibility(View.GONE);
         int[] actions = {R.id.action_status, R.id.action_explore, R.id.action_inventory,
                 R.id.action_shop, R.id.action_heal, R.id.action_equipment, R.id.action_rest,
                 R.id.action_notes, R.id.action_eat, R.id.action_sleep, R.id.action_save,
@@ -253,17 +257,9 @@ public class MainActivity extends AppCompatActivity {
         ((Button) findViewById(R.id.action_exit)).setText(R.string.menu_exit);
         game.bindRadioScene(current);
         View sleepButton = findViewById(R.id.action_sleep);
-        boolean canSleep = current.sleepiness > 40 && current.health > 0;
-        sleepButton.setEnabled(canSleep);
-        sleepButton.setAlpha(canSleep ? 1f : 0.65f);
-        if (canSleep) ((Button) sleepButton).setText(R.string.menu_sleep);
-        else {
-            String title = getString(R.string.menu_sleep);
-            android.text.SpannableString label = new android.text.SpannableString(title + "\n" + getString(R.string.sleep_requirement));
-            label.setSpan(new android.text.style.AbsoluteSizeSpan(11,true),title.length()+1,label.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            label.setSpan(new android.text.style.ForegroundColorSpan(0xffb8b8b8),title.length()+1,label.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            ((Button) sleepButton).setText(label);
-        }
+        sleepButton.setEnabled(current.health > 0);
+        sleepButton.setAlpha(current.health > 0 ? 1f : 0.65f);
+        ((Button) sleepButton).setText(R.string.menu_sleep);
         ((HomeHud)findViewById(R.id.home_hud)).update(current);
         ((TextView)findViewById(R.id.panel_world_clock)).setText("День "+current.day+" · "+current.time+" · Время действий");
         if (current.mode == GameSession.Mode.ENDED && (current.text.contains("Игра сохранена:") || current.text.contains("Игра завершена без сохранения."))) {
