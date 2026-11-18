@@ -12,6 +12,9 @@ final class ApartmentBuilding implements Serializable {
     private boolean underStairs, mailbox, notice, stairsSeen, stairsDanger, stairsCleared;
     private boolean kitchen, bedroom, balcony, apartment24Open, apartment24Loot, atticKeyTaken, calendar;
     private boolean apartment34Note, apartment34Food, apartment34Material, hatchOpen, hatchLoot;
+    private boolean apartmentCrowbarTaken;
+    private java.util.HashMap<String, ItemInfo> earlyFinds;
+    private java.util.HashMap<String, ItemInfo> finds(){if(earlyFinds==null)earlyFinds=new java.util.HashMap<>();return earlyFinds;}
     boolean hatchOpen(){return hatchOpen;}
     private boolean take(Fighter p,ItemInfo item){
         if(!p.addItem(item)){GameIO.out().println("Рюкзак полон. Находка останется здесь — можно вернуться позже.");return false;}
@@ -28,7 +31,7 @@ final class ApartmentBuilding implements Serializable {
             GameIO.menu("Жилой подъезд","Основной вход открыт. На лестнице виден перевёрнутый шкаф; прислушайтесь перед тем, как идти дальше.");
             GameIO.point(1,"Вестибюль и почтовые ящики","Письма, объявления и вещи под лестницей",underStairs&&mailbox&&notice);
             GameIO.point(2,"Лестничные пролёты",stairsCleared?"Проход доступен":"Узнайте, что за завалом",stairsCleared);
-            GameIO.point(3,"Квартира №21 · Последний ужин","Приоткрытая дверь",kitchen&&bedroom&&balcony,stairsCleared);
+            GameIO.point(3,"Квартира №21 · Последний ужин","Приоткрытая дверь",kitchen&&bedroom&&balcony&&apartmentCrowbarTaken,stairsCleared);
             GameIO.point(4,"Квартира №24 · Запертая дверь","На двери глубокие царапины",apartment24Open&&apartment24Loot&&atticKeyTaken&&calendar&&!world.semen().canInspectWardrobe(),stairsCleared);
             GameIO.action(5,"Квартира №31 · Марина и Артём","Из-за двери можно услышать голос",stairsCleared);
             GameIO.point(6,"Квартира №34 · Пустые чемоданы","Следы подготовки к эвакуации",apartment34Note&&apartment34Food&&apartment34Material,stairsCleared);
@@ -46,7 +49,7 @@ final class ApartmentBuilding implements Serializable {
                     GameIO.action(1,"Обыскать под лестницей",underStairs?"Уже осмотрено":"5 минут",!underStairs);
                     GameIO.action(2,"Осмотреть почтовые ящики",mailbox?"Письма прочитаны":"5 минут",!mailbox);
                     GameIO.action(3,"Проверить доску объявлений",notice?"Уже прочитана":"5 минут",!notice);GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
-                    if(a==1&&!underStairs&&time(p,world,5,2)&&take(p,Shop.createItem(48))){underStairs=true;mark(world);}
+                    if(a==1&&!underStairs&&time(p,world,5,2)&&EarlyLoot.search(p,finds(),"underStairs",random,30,48,2)){underStairs=true;mark(world);}
                     if(a==2&&!mailbox&&time(p,world,5,1)){mailbox=true;String t="Среди неотправленных писем просьба пожилой женщины проверить квартиру её дочери на четвёртом этаже.";world.note("Письма жильцов",t);GameIO.out().println(t);mark(world);}
                     if(a==3&&!notice&&time(p,world,5,1)){notice=true;String t="Ключи от чердака находятся в квартире 24. Не забывайте закрывать люк.";world.note("Объявление в подъезде",t);GameIO.out().println(t);mark(world);}
                 } else if(section==2){
@@ -63,9 +66,11 @@ final class ApartmentBuilding implements Serializable {
                     GameIO.menu("Квартира №21 · Последний ужин","В прихожей обувь, на кухне три тарелки. Записка: «Если вернётесь раньше меня, еда в верхнем шкафу. Только не открывайте балкон, там разбито окно».");
                     GameIO.action(1,"Осмотреть кухню",kitchen?"Уже осмотрена":"10 минут",!kitchen);
                     GameIO.action(2,"Осмотреть спальню",bedroom?"Уже осмотрена":"10 минут",!bedroom);
-                    GameIO.action(3,"Открыть балкон и осмотреть верёвку",balcony?"Уже осмотрено":"5 минут",!balcony);GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
+                    GameIO.action(3,"Открыть балкон и осмотреть верёвку",balcony?"Уже осмотрено":"5 минут",!balcony);
+                    GameIO.action(4,"Осмотреть кладовку",apartmentCrowbarTaken?"Лом уже забран":"10 минут · у стены виден лом",!apartmentCrowbarTaken);GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
                     if(a==1&&!kitchen&&time(p,world,10,2)&&take(p,Shop.createItem(17))){kitchen=true;mark(world);SurvivalSystems.collect(p,JunkLoot.apartmentItems(0,random),scanner);}
-                    if(a==2&&!bedroom&&time(p,world,10,2)&&take(p,Shop.createItem(1))){bedroom=true;mark(world);SurvivalSystems.collect(p,JunkLoot.apartmentItems(2,random),scanner);}
+                    if(a==2&&!bedroom&&time(p,world,10,2)&&EarlyLoot.search(p,finds(),"bedroom",random,25,48,2)){bedroom=true;mark(world);}
+                    if(a==4&&!apartmentCrowbarTaken&&time(p,world,10,2)&&take(p,Shop.createItem(27))){apartmentCrowbarTaken=true;mark(world);}
                     if(a==3&&!balcony&&time(p,world,5,1)){balcony=true;String t="Между соседними балконами закреплена верёвка. Похоже, кто-то пытался попасть в соседнюю квартиру, обходя лестницу.";world.note("Верёвка на балконе",t);GameIO.out().println(t);mark(world);}
                 } else if(section==4){
                     GameIO.menu("Квартира №24 · Запертая дверь",apartment24Open?"Дверь открыта. Внутри хозяйственные вещи и металлическая коробка.":"На двери глубокие царапины. Замок выглядит исправным.");
@@ -84,8 +89,8 @@ final class ApartmentBuilding implements Serializable {
                     GameIO.action(2,"Обыскать кухню",apartment34Food?"Уже осмотрена":"10 минут",!apartment34Food);
                     GameIO.action(3,"Осмотреть вещи",apartment34Material?"Уже осмотрены":"10 минут",!apartment34Material);GameIO.action(0,"Назад");int a=SurvivalSystems.choice(scanner);if(a==0)break;
                     if(a==1&&!apartment34Note&&time(p,world,5,1)){apartment34Note=true;String t="Вода, документы, лекарства, одежда. Не брать лишнего. Сказали, что места в транспорте мало.";world.note("Список эвакуации жильцов",t);GameIO.out().println(t);mark(world);}
-                    if(a==2&&!apartment34Food&&time(p,world,10,2)&&take(p,Shop.createItem(16))){apartment34Food=true;mark(world);SurvivalSystems.collect(p,JunkLoot.apartmentItems(0,random),scanner);}
-                    if(a==3&&!apartment34Material&&time(p,world,10,2)&&take(p,Shop.createItem(48))){apartment34Material=true;mark(world);}
+                    if(a==2&&!apartment34Food&&time(p,world,10,2)&&EarlyLoot.search(p,finds(),"apartment34Food",random,30,16,0)){apartment34Food=true;mark(world);SurvivalSystems.collect(p,JunkLoot.apartmentItems(0,random),scanner);}
+                    if(a==3&&!apartment34Material&&time(p,world,10,2)&&EarlyLoot.search(p,finds(),"apartment34Material",random,25,48,2)){apartment34Material=true;mark(world);}
                 } else if(section==7){
                     GameIO.menu("Чердачный люк",hatchOpen?"Люк открыт. Узкий проход ведёт на крыши домов.":"На верхнем пролёте заперт люк. Подойдёт ключ из квартиры №24 или лом.");
                     if(!hatchOpen){GameIO.action(1,"Открыть ключом","5 минут",hasAtticKey(p));GameIO.action(2,"Вскрыть ломом","10 минут · шум",place.hasCrowbar(p));}
@@ -95,7 +100,7 @@ final class ApartmentBuilding implements Serializable {
                         hatchOpen=true;if(a==2){GameIO.sound(GameSound.METAL_DOOR);GameIO.out().println("Лом громко ударяет по замку.");}
                         world.note("Чердачный проход","Люк открыт. С крыши можно осмотреть жилые кварталы.");GameIO.out().println("Открыта локация: Крыши домов.");mark(world);if(a==2&&!BreakIn.attack(p,scanner,random))return;
                     }
-                    if(a==3&&hatchOpen&&!hatchLoot&&time(p,world,10,2)&&take(p,Shop.createItem(19))){hatchLoot=true;mark(world);}
+                    if(a==3&&hatchOpen&&!hatchLoot&&time(p,world,10,2)&&EarlyLoot.search(p,finds(),"hatchLoot",random,35,19,2)){hatchLoot=true;mark(world);}
                 } else break;
             }
         }

@@ -8,6 +8,10 @@ import java.util.List;
 public final class GameStatus {
     public final String weapon, armor, load, ammo, injuries, combatInjuries, temperature;
     public final int weaponCondition, protection;
+    public final int bleeding, worstBleeding;
+    public boolean bleedingDistress(int health,int maxHealth){
+        return health>0 && bleeding>0 && (worstBleeding>=3 || maxHealth>0 && (long)health*5<=maxHealth);
+    }
     public final List<Enemy> enemies;
 
     public static final class Enemy {
@@ -34,6 +38,8 @@ public final class GameStatus {
     GameStatus(SurvivorInfo player, List<? extends CombatEnemy> opponents, CombatEnemy target) {
         temperature=player==null?"":player.coldState();
         Fighter fighter = player instanceof Fighter ? (Fighter) player : null;
+        bleeding=fighter==null?0:fighter.totalBleeding();
+        worstBleeding=fighter==null?0:fighter.worstBleeding();
         injuries = fighter == null ? "" : fighter.injurySummary();
         combatInjuries = fighter == null ? "" : fighter.combatInjurySummary();
         Weapons equipped = fighter == null ? null : fighter.getEquippedWeapon();

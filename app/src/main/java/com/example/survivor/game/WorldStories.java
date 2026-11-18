@@ -216,15 +216,17 @@ final class WorldStories implements Serializable {
     String time() { return String.format(Locale.ROOT, "%02d:%02d", minuteOfDay() / 60, minuteOfDay() % 60); }
     private transient Fighter recoveryPlayer;
     void bindRecovery(Fighter player) { recoveryPlayer=player; }
+    String bleedingWarning(){return recoveryPlayer==null?"":recoveryPlayer.bleedingWarning();}
     private transient boolean sleeping;
     void advanceSleepMinutes(int minutes){sleeping=true;try{advanceMinutes(minutes);}finally{sleeping=false;}}
     void advanceMinutes(int minutes) {
-        if(recoveryPlayer!=null){recoveryPlayer.recoverInjuries(minutes);if(!sleeping)recoveryPlayer.advanceAwakeMinutes(minutes);for(int elapsed=0;elapsed<minutes;elapsed+=30){int step=Math.min(30,minutes-elapsed),t=(minuteOfDay()+elapsed)%1440;boolean cold=t>=1080 || t<480;recoveryPlayer.updateCold(step,cold,GameIO.atHome());if(sleeping && GameIO.atHome() && recoveryPlayer.getUpgrades().blanket!=null)recoveryPlayer.updateCold(step,false,true);}}
+        if(recoveryPlayer!=null){recoveryPlayer.recoverInjuries(minutes);if(!GameIO.inBattle())recoveryPlayer.advanceBleeding(minutes);if(!sleeping)recoveryPlayer.advanceAwakeMinutes(minutes);for(int elapsed=0;elapsed<minutes;elapsed+=30){int step=Math.min(30,minutes-elapsed),t=(minuteOfDay()+elapsed)%1440;boolean cold=t>=1080 || t<480;recoveryPlayer.updateCold(step,cold,GameIO.atHome());if(sleeping && GameIO.atHome() && recoveryPlayer.getUpgrades().blanket!=null)recoveryPlayer.updateCold(step,false,true);}}
         ensureClock();
         long total = (long) minuteOfDay + Math.max(0, minutes);
         day += (int) (total / 1440);
         minuteOfDay = (int) (total % 1440);
         if(recoveryPlayer!=null)warehouseFinale().announceDeparture(this,recoveryPlayer);
+        if(recoveryPlayer!=null && !recoveryPlayer.isAlive())GameIO.bleedingDeath();
     }
     private int searches;
     private int lastStorySearch = -4;

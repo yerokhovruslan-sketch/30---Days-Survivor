@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 
 /** Owns the original game loop on one worker; the UI only sends numbered choices. */
 public final class GameSession implements AutoCloseable {
+    static final class BleedingDeath extends RuntimeException { private static final long serialVersionUID=1L; }
     public enum Mode { MAIN, CHOICE, BUSY, ENDED }
     public static final class Choice {
         public final int number;
@@ -98,6 +99,7 @@ public final class GameSession implements AutoCloseable {
             if(player!=null){player.increaseHunger(clock().absoluteMinute()/60-before/60);}
             clock().refreshMarket();
             if(menu.title.equals("Покупка") && !menu.quantity){menu=new GameMenu.Builder("Покупка","Остатки и цены обновляются по игровым часам.");Shop.showCatalogue();}
+            if(!player.isAlive()){playerHurt(player);input.offer(Integer.MIN_VALUE);return;}
             publish(atMain?Mode.MAIN:Mode.CHOICE,false);if(clock().minuteOfDay()%5==0)checkpoint();}
     }
     private volatile boolean closed;
@@ -145,6 +147,9 @@ public final class GameSession implements AutoCloseable {
             try {
                 if (program == null) Survivor.main(new String[0]);
                 else program.run();
+                publish(Mode.ENDED);
+            } catch (BleedingDeath died) {
+                output.println("Джон погиб от кровопотери.");
                 publish(Mode.ENDED);
             } catch (CancellationException cancelled) {
                 // Activity's ViewModel was cleared; do not change the user's explicit save.
@@ -248,6 +253,7 @@ public final class GameSession implements AutoCloseable {
             try {
                 int number=input.take();
                 if (closed) throw new CancellationException();
+                if(player!=null && !player.isAlive())throw new BleedingDeath();
                 buffer.reset();
                 menu = new GameMenu.Builder("", "");
                 atMain = false;

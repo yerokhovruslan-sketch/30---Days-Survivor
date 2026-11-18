@@ -29,8 +29,8 @@
         <item>@drawable/field_brick_wall</item>
         <item>@drawable/field_hedgehog</item>
         <item>@drawable/field_concrete_block</item>
-        <item>@drawable/battle_obstacle_fallen_tree</item>
-        <item>@drawable/battle_obstacle_stump</item>
+        <item>@drawable/forest_log</item>
+        <item>@drawable/forest_stump</item>
         <item>@drawable/field_trash</item>
         <item>@drawable/field_barricade</item>
         <item>@drawable/field_bush</item>

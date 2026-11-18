@@ -181,7 +181,7 @@ final class MenuRenderer {
                 body.addView(text(card.title,18,INK,true));body.addView(text(card.detail,14,MUTED,false));append(cards,body,12);continue;
             }
             if ("bed_comfort".equals(card.image)) {
-                append(cards,bedDiagram(),12); continue;
+                append(cards,bedDiagram(frame.choices),12); continue;
             }
             if (card.image != null && card.image.startsWith("body:")) {
                 append(cards,bodyDiagram(card.image.substring("body:".length())),12);
@@ -410,15 +410,20 @@ final class MenuRenderer {
         return panel;
     }
 
-    private View bedDiagram() {
+    private View bedDiagram(java.util.List<GameSession.Choice> choices) {
         FrameLayout frame=new FrameLayout(context);
         frame.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(340)));
         ImageView image=new ImageView(context); image.setImageResource(R.drawable.bed_comfort); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         frame.addView(image,new FrameLayout.LayoutParams(-1,-1));
         String[] labels={"Подушка","Одеяло","Простыня"};float[] positions={.23f,.49f,.72f};
-        for(int i=0;i<3;i++) { final int number=i+1; TextView mark=text("+",24,Color.WHITE,true); mark.setGravity(Gravity.CENTER);mark.setBackground(box(0xDD292929,0xFFE0C8A6));mark.setContentDescription(labels[i]);
+        for(int i=0;i<3;i++) { final int number=i+1;
+            GameSession.Choice choice=null;for(GameSession.Choice c:choices)if(c.number==number){choice=c;break;}
+            final boolean available=choice!=null&&choice.enabled;
+            boolean installed=choice!=null&&choice.detail.startsWith("Уже положено:");
+            TextView mark=text(installed?"✓":"+",24,Color.WHITE,true); mark.setGravity(Gravity.CENTER);mark.setBackground(box(0xDD292929,0xFFE0C8A6));
+            mark.setAlpha(available||installed?1f:.4f);mark.setContentDescription(labels[i]+(choice==null?"":". "+choice.detail));
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(42),dp(42));lp.gravity=Gravity.TOP|Gravity.CENTER_HORIZONTAL;lp.topMargin=(int)(dp(340)*positions[i]);frame.addView(mark,lp);
-            mark.setOnClickListener(v->{if(TapFeedback.run(v,()->listener.action(number)))listener.click();});
+            mark.setOnClickListener(v->{if(!available){listener.unavailable();return;}if(TapFeedback.run(v,()->listener.action(number)))listener.click();});
         }
         return frame;
     }

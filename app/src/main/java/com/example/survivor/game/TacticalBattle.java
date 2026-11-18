@@ -296,7 +296,7 @@ final class TacticalBattle implements java.io.Serializable {
             battle.act(action,scanner);
         }
         for(String line:battle.log) GameIO.out().println(line);
-        if(returnTravel && battle.escaped && player.isAlive()) Survivor.travel(player,"Возвращение после отступления",5);
+        if(returnTravel && battle.escaped && player.isAlive()){GameIO.clearBattle();Survivor.travel(player,"Возвращение после отступления",5);}
         return false;
     }
 

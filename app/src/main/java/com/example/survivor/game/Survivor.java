@@ -121,6 +121,7 @@ class BodyInjury implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
     int trauma;
     int bleeding;
+    int bleedingMinutes;
     boolean treated;
     int recoveryMinutes;
     BodyInjury(int trauma, int bleeding) { this.trauma = trauma; this.bleeding = bleeding; }
@@ -160,6 +161,7 @@ class Fighter extends SurvivorInfo {
     private java.util.EnumMap<BodyPart, BodyInjury> injuries;
     private boolean bodySystemV2 = true;
     private int poisoningMinutes;
+    private int bleedingWindowMinutes, bleedingWindowDamage;
     int poisoningMinutes(){return poisoningMinutes;}
     void eatFood(Food food){
         eat(food.getNutrition());
@@ -192,7 +194,10 @@ class Fighter extends SurvivorInfo {
     void recoverInjuries(int minutes) {
         if (minutes <= 0 || !isAlive()) return;
         poisoningMinutes=Math.max(0,poisoningMinutes-minutes);
-        for (BodyInjury wound : injuries().values()) {
+        boolean losingBlood=false;for(BodyInjury wound:injuries().values())if(wound.bleeding>0){losingBlood=true;break;}
+        for (java.util.Map.Entry<BodyPart,BodyInjury> entry : injuries().entrySet()) {
+            BodyInjury wound=entry.getValue();
+            if(losingBlood && (entry.getKey()==BodyPart.HEAD || entry.getKey()==BodyPart.TORSO))continue;
             if (wound.bleeding > 0 || wound.trauma <= 0 || !wound.treated && wound.trauma >= 30) continue;
             long total = (long) wound.recoveryMinutes + (difficulty()==1 ? minutes*3L/2 : minutes);
             int restored = (int)Math.min(wound.trauma, total / 60);
@@ -211,6 +216,8 @@ class Fighter extends SurvivorInfo {
     }
     int trauma(BodyPart part) { return injuries().containsKey(part) ? injuries().get(part).trauma : 0; }
     int bleed(BodyPart part) { return injuries().containsKey(part) ? injuries().get(part).bleeding : 0; }
+    int totalBleeding() { int total=0;for(BodyInjury wound:injuries().values())total+=wound.bleeding;return total; }
+    int worstBleeding() { int worst=0;for(BodyInjury wound:injuries().values())worst=Math.max(worst,wound.bleeding);return worst; }
     private int armsTrauma() { return Math.max(trauma(BodyPart.LEFT_ARM), trauma(BodyPart.RIGHT_ARM)); }
     private int legsTrauma() { return Math.max(trauma(BodyPart.LEFT_LEG), trauma(BodyPart.RIGHT_LEG)); }
     private BodyPart randomBodyPart() {
@@ -327,6 +334,46 @@ class Fighter extends SurvivorInfo {
         GameIO.hurt(this);
         return damage;
     }
+    int bleedingInterval(int severity) {
+        int base=severity<=1?60:severity==2?30:severity==3?20:10;
+        return difficulty()==1?base*2:difficulty()==3?(base*3+3)/4:base;
+    }
+    String bleedingWarning() {
+        StringBuilder text=new StringBuilder();
+        for(BodyPart part:BodyPart.values())if(bleed(part)>0){
+            if(text.length()>0)text.append("; ");
+            int level=bleed(part);
+            text.append(part.label).append(": ").append(level).append("/5, −1 за ")
+                .append(bleedingInterval(level)).append(" мин");
+        }
+        return text.length()==0?"":"Кровотечение: "+text+". Нужна перевязка (в сумме не более 6 здоровья за час).";
+    }
+    int advanceBleeding(int minutes) {
+        if(minutes<=0 || !isAlive())return 0;
+        int damage=0;
+        for(int minute=0;minute<minutes && isAlive();minute++){
+            if(bleedingWindowMinutes>=60){bleedingWindowMinutes=0;bleedingWindowDamage=0;}
+            bleedingWindowMinutes++;
+            for(BodyPart part:BodyPart.values()){
+                BodyInjury wound=injuries().get(part);
+                if(wound==null || wound.bleeding<=0)continue;
+                wound.bleedingMinutes++;
+                int interval=bleedingInterval(wound.bleeding);
+                if(wound.bleedingMinutes>=interval){
+                    wound.bleedingMinutes-=interval;
+                    if(bleedingWindowDamage<6){
+                        BodyPart vital=trauma(BodyPart.HEAD)>trauma(BodyPart.TORSO)?BodyPart.HEAD:BodyPart.TORSO;
+                        BodyInjury vitalWound=injury(vital);
+                        vitalWound.trauma=Math.min(100,vitalWound.trauma+1);
+                        bleedingWindowDamage++;damage++;
+                        if(!isAlive())break;
+                    }
+                }
+            }
+        }
+        if(damage>0){GameIO.out().println("Кровопотеря: −"+damage+" здоровья. Остановите кровотечение.");GameIO.hurt(this);}
+        return damage;
+    }
     boolean hasInjuries() {
         for (BodyInjury value : injuries().values()) if (value.trauma > 0 || value.bleeding > 0) return true;
         return false;
@@ -368,7 +415,7 @@ class Fighter extends SurvivorInfo {
             int t = trauma(part), b = bleed(part);
             String condition = t >= 65 ? "тяжёлая травма" : t >= 30 ? "ранение" : "ушиб";
             result.append(part.label).append(": ").append(condition).append(" · состояние ").append(100-t).append("/100");
-            if (b > 0) result.append(" · кровотечение ").append(b).append("/5");
+            if (b > 0) result.append(" · кровотечение ").append(b).append("/5 · −1 здоровье за ").append(bleedingInterval(b)).append(" мин вне боя");
             else if (t > 0 && t < 30) {long remaining=Math.max(0,t*60L-injury(part).recoveryMinutes);double days=remaining/(difficulty()==1?2160.0:1440.0);result.append(String.format(java.util.Locale.ROOT," · заживёт самостоятельно примерно за %.1f дн.",Math.max(0.1,Math.ceil(days*10)/10)));}
             else if (t > 0) result.append(injury(part).treated ? " · заживает" : " · требуется обработка");
             result.append('\n');
@@ -384,6 +431,7 @@ class Fighter extends SurvivorInfo {
         BodyInjury wound = injury(part);
         boolean bandage = medicine.getName().toLowerCase(java.util.Locale.ROOT).contains("бинт") && !medicine.getName().equals("Кровоостанавливающий бинт");
         wound.bleeding = Math.max(0, wound.bleeding - (bandage ? 3 : 5));
+        if(wound.bleeding==0)wound.bleedingMinutes=0;
         wound.treated = true;
         wound.recoveryMinutes = 0;
         return part.label + ": кровотечение " + (wound.bleeding == 0 ? (difficulty()==1?"остановлено; рана заживает быстрее.":"остановлено; рана заживает: 1 единица в игровой час.") : "ослаблено; для заживления остановите кровь полностью.");

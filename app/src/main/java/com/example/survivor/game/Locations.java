@@ -221,8 +221,8 @@ class Location implements java.io.Serializable {
         point.markSearched();
         searchedSites++;
         if (name.equals("Тихий двор") && point.name.equals("Мусорные контейнеры")) {
-            GameIO.out().println("Ты отодвигаешь обломок двери и вытаскиваешь лом. Он пригодится для закрытых помещений.");
-            return Shop.createItem(27);
+            GameIO.out().println("Под обломком только старый мусор. Ничего полезного не осталось.");
+            return null;
         }
         int chance = Math.min(95, 62 + difficulty * 8 + bonus + (point.highInterest ? 10 : 0) + stateLootModifier());
         if (random.nextInt(100) >= chance) {
@@ -431,7 +431,7 @@ class Locations implements java.io.Serializable {
             // 1. Residential quarter.
             case 1 -> List.of(point("Детская площадка", "Рюкзак ребёнка и коробка под скамейкой; рядом скрипят качели."),
                     point("Припаркованные автомобили", "Салоны, багажники и красная машина у площадки."),
-                    point("Мусорные контейнеры", "Под обломком двери зажат лом; завал можно отодвинуть руками."),
+                    point("Мусорные контейнеры", "Коробки, сломанная мебель и обломок двери."),
                     locked("Подвальный вход", "Металлическая дверь; внутри инструментальный шкаф."),
                     point("Гараж дворника", "Приоткрытая дверь, инструменты и план служебного прохода."));
             case 3 -> List.of(point("Салон автобуса", "Сиденья, сумки пассажиров и забытые куртки."),

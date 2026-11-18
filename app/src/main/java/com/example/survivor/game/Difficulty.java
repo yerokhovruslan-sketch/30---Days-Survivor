@@ -16,8 +16,8 @@ final class Difficulty {
             return selected;
         }
     }
-    static int needsPercent(int level){return level==1?65:level==3?125:100;}
-    static int encounterChance(int base,int level){return Math.min(100,(base*(level==1?80:level==3?115:100)+50)/100);}
-    static int damage(int amount,int level){return amount<=0?0:Math.max(1,level==1?(amount*65+99)/100:level==3?(amount*120+99)/100:amount);}
-    static int loot(int level){return level==1?15:level==3?-10:0;}
+    static int needsPercent(int level){return level==1?65:level==3?125:110;}
+    static int encounterChance(int base,int level){return Math.min(100,(base*(level==1?80:level==3?115:105)+50)/100);}
+    static int damage(int amount,int level){return amount<=0?0:Math.max(1,(amount*(level==1?65:level==3?120:110)+99)/100);}
+    static int loot(int level){return level==1?15:level==3?-10:-5;}
 }

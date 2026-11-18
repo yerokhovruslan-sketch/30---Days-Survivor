@@ -1,6 +1,8 @@
 package com.example.survivor;
 
 import android.content.Context;
+import android.animation.ValueAnimator;
+import android.animation.ArgbEvaluator;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -29,6 +31,10 @@ public final class HomeHud extends LinearLayout {
     private final Metric stamina, sleep, hunger, noise, temperature;
     private final Bitmap icons;
     private final Bitmap[] clockIcons = new Bitmap[4];
+    private ValueAnimator temperatureAnimation;
+    private int temperatureColor = 0xffffce62;
+    private int temperatureTarget = temperatureColor;
+    private boolean temperatureInitialized;
     public HomeHud(Context c, AttributeSet attrs) {
         super(c,attrs);setOrientation(VERTICAL);setPadding(dp(23),dp(20),dp(23),dp(20));
         GradientDrawable background=new GradientDrawable();
@@ -48,10 +54,12 @@ public final class HomeHud extends LinearLayout {
         stamina=metric("Выносливость",0,100,true);addView(stamina.container);
         line();
         sleep=metric("Сонливость",1,100,false);hunger=metric("Голод",2,100,false);
-        noise=metric("Шум",4,60,false);temperature=metric("Температура",3,100,false);
+        noise=metric("Шум",4,60,false);temperature=metric("",3,100,false);
         LinearLayout first=row();first.addView(sleep.container,new LayoutParams(0,-2,1));first.addView(hunger.container,new LayoutParams(0,-2,1));addView(first);
         LinearLayout second=row();second.addView(noise.container,new LayoutParams(0,-2,1));second.addView(temperature.container,new LayoutParams(0,-2,1));addView(second);
         temperature.value.setText("—");
+        temperature.bar.setProgress(100);
+        temperature.fill.setColor(temperatureColor);
     }
     public void onClockClick(OnClickListener listener){clock.setOnClickListener(listener);}
     public void update(GameSession.Frame f){
@@ -67,7 +75,26 @@ public final class HomeHud extends LinearLayout {
         balance.setText("Баланс: "+f.balance+" $");
         stamina.set(f.stamina,100);sleep.set(f.sleepiness,100);hunger.set(f.hunger,100);noise.set(f.noise,60);
         temperature.value.setText(f.status.temperature);
-        temperature.bar.setProgress("Холодно".equals(f.status.temperature) ? 100 : "Зябко".equals(f.status.temperature) ? 50 : 0);
+        int target="Холодно".equals(f.status.temperature) ? 0xff397dd1
+                : "Зябко".equals(f.status.temperature) ? 0xff86cce9 : 0xffffce62;
+        updateTemperatureColor(target);
+    }
+    private void updateTemperatureColor(int target){
+        if(temperatureInitialized && target==temperatureTarget)return;
+        temperatureTarget=target;
+        if(temperatureAnimation!=null)temperatureAnimation.cancel();
+        if(!temperatureInitialized){
+            temperatureInitialized=true;temperatureColor=target;temperature.fill.setColor(target);return;
+        }
+        temperatureAnimation=ValueAnimator.ofObject(new ArgbEvaluator(),temperatureColor,target);
+        temperatureAnimation.setDuration(1200);
+        temperatureAnimation.addUpdateListener(animation->{temperatureColor=(int)animation.getAnimatedValue();temperature.fill.setColor(temperatureColor);});
+        temperatureAnimation.start();
+    }
+    @Override protected void onDetachedFromWindow(){
+        if(temperatureAnimation!=null)temperatureAnimation.cancel();
+        temperatureInitialized=false;
+        super.onDetachedFromWindow();
     }
     private Metric metric(String title,int icon,int max,boolean large){
         LinearLayout outer=row();outer.setGravity(Gravity.CENTER_VERTICAL);outer.setPadding(0,dp(large?15:12),dp(large?0:7),dp(large?15:8));
@@ -75,14 +102,15 @@ public final class HomeHud extends LinearLayout {
         int iconSize=large?29:icon==4?30:24;
         LayoutParams ip=new LayoutParams(dp(iconSize),dp(iconSize));ip.setMarginEnd(dp(9));outer.addView(picture,ip);
         LinearLayout column=new LinearLayout(getContext());column.setOrientation(VERTICAL);outer.addView(column,new LayoutParams(0,-2,1));
-        LinearLayout caption=row();TextView captionText=label(title,large?17:14,large);caption.addView(captionText,new LayoutParams(0,-2,1));
-        TextView value=label("0/"+max,large?17:14,false);value.setGravity(Gravity.END);caption.addView(value);column.addView(caption);
+        LinearLayout caption=row();
+        if(!title.isEmpty()){TextView captionText=label(title,large?17:14,large);caption.addView(captionText,new LayoutParams(0,-2,1));}
+        TextView value=label("0/"+max,large?17:14,false);value.setGravity(title.isEmpty()?Gravity.START:Gravity.END);caption.addView(value);column.addView(caption);
         ProgressBar progress=new ProgressBar(getContext(),null,android.R.attr.progressBarStyleHorizontal);progress.setMax(max);
         GradientDrawable track=shape(0xff302d2a);track.setStroke(dp(1),0xff514a42);
         GradientDrawable fill=shape(large?0xff7e9faa:0xff9c9284);
         LayerDrawable layers=new LayerDrawable(new android.graphics.drawable.Drawable[]{track,new ClipDrawable(fill,Gravity.LEFT,ClipDrawable.HORIZONTAL)});
         layers.setId(0,android.R.id.background);layers.setId(1,android.R.id.progress);progress.setProgressDrawable(layers);
-        LayoutParams bp=new LayoutParams(-1,dp(large?8:6));bp.topMargin=dp(4);column.addView(progress,bp);return new Metric(outer,value,progress);
+        LayoutParams bp=new LayoutParams(-1,dp(large?8:6));bp.topMargin=dp(4);column.addView(progress,bp);return new Metric(outer,value,progress,fill);
     }
     private GradientDrawable shape(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(5));return d;}
     private void line(){View v=new View(getContext());v.setBackgroundColor(0xff544b42);addView(v,new LayoutParams(-1,dp(1)));}
@@ -105,5 +133,5 @@ public final class HomeHud extends LinearLayout {
         for(int i=0;i<px.length;i++){int c=px[i],red=Color.red(c),green=Color.green(c),blue=Color.blue(c);if((red>140&&red>green*1.45&&red>blue*1.5)||(red>165&&green>150&&blue<100))px[i]=Color.TRANSPARENT;}
         part.setPixels(px,0,w,0,0,w,h);return trim(part);
     }
-    private static final class Metric {final LinearLayout container;final TextView value;final ProgressBar bar;Metric(LinearLayout c,TextView v,ProgressBar p){container=c;value=v;bar=p;}void set(int n,int max){value.setText(n+"/"+max);bar.setProgress(Math.max(0,Math.min(n,max)));}}
+    private static final class Metric {final LinearLayout container;final TextView value;final ProgressBar bar;final GradientDrawable fill;Metric(LinearLayout c,TextView v,ProgressBar p,GradientDrawable f){container=c;value=v;bar=p;fill=f;}void set(int n,int max){value.setText(n+"/"+max);bar.setProgress(Math.max(0,Math.min(n,max)));}}
 }

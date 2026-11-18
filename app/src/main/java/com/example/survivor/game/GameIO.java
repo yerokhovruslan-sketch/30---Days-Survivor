@@ -34,6 +34,7 @@ final class GameIO {
     static void clearBattle() { if (CURRENT.get() != null) CURRENT.get().battle(null, null, null); }
     static boolean supportsTactics() { return CURRENT.get() != null; }
     static boolean inBattle(){return CURRENT.get()!=null && CURRENT.get().inBattle();}
+    static void bleedingDeath(){if(CURRENT.get()!=null && !inBattle())throw new GameSession.BleedingDeath();}
     static void board(BattleBoard board) { if (CURRENT.get() != null) CURRENT.get().board(board); }
     static void scene(String scene) { if(CURRENT.get()!=null)CURRENT.get().scene(scene); }
     static void checkpoint() { if(CURRENT.get()!=null)CURRENT.get().checkpoint(); }
@@ -67,6 +68,7 @@ final class GameIO {
     }
     static void action(int number, String label, String detail) { action(number, label, detail, true); }
     static void action(int number, String label, String detail, boolean enabled) {
+        if(label.equals("Вернуться домой") && clock()!=null){String warning=clock().bleedingWarning();if(!warning.isEmpty())detail=detail.isEmpty()?warning:detail+"\n"+warning;}
         if (CURRENT.get() != null) CURRENT.get().action(number, label, detail, enabled);
     }
     static void card(String label, String detail) { if (CURRENT.get() != null) CURRENT.get().card(label, detail); }

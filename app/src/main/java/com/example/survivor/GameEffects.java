@@ -19,9 +19,9 @@ final class GameEffects implements AutoCloseable {
     private final Set<Integer> ready=new HashSet<>();
     private final List<Integer> streams=new ArrayList<>();
     private final Random random=new Random();
-    private MediaPlayer groan, weatherLoop, fireLoop, forestLoop;
+    private MediaPlayer groan, weatherLoop, fireLoop, forestLoop, heartbeatLoop;
     private int weatherResource;
-    private boolean wantFire, wantForest, ambientHome, ambientNight, ambientExploring, ambientCombat;
+    private boolean wantFire, wantForest, wantHeartbeat, ambientHome, ambientNight, ambientExploring, ambientCombat;
     private boolean foreground,closed,low,zombies,sceneMuted;
     private long next,nextHurt,clock,stamp,nextGroan,nextSnort,nextEnvironmental;
     GameEffects(Context context){this(context,()->false);}
@@ -40,6 +40,7 @@ final class GameEffects implements AutoCloseable {
         int rain=f.hasPlayer && f.rain && f.mode!=GameSession.Mode.ENDED ? (f.home?R.raw.ambient_rain_inside:R.raw.ambient_rain_outside):0;
         if(weatherResource!=rain){stopWeather();weatherResource=rain;}
         boolean active=f.hasPlayer && f.health>0 && f.mode!=GameSession.Mode.ENDED;
+        wantHeartbeat=active && f.status.bleedingDistress(f.health,f.maxHealth);
         wantFire=active && f.fire;
         ambientHome=active && f.home;
         ambientNight=f.night;
@@ -72,17 +73,20 @@ final class GameEffects implements AutoCloseable {
         if(stream!=0)streams.add(stream);if(streams.size()>96)streams.remove(0);
     }
     private void syncLoops(){
-        if(!foreground || closed || sceneMuted){stopWeatherPlayer();stopFire();stopForest();return;}
+        if(!foreground || closed || sceneMuted){stopWeatherPlayer();stopFire();stopForest();stopHeartbeat();return;}
         if(weatherResource!=0 && weatherLoop==null){weatherLoop=MediaPlayer.create(app,weatherResource);if(weatherLoop!=null){weatherLoop.setLooping(true);weatherLoop.setVolume(.22f,.22f);weatherLoop.start();}}
         if(wantFire && fireLoop==null){fireLoop=MediaPlayer.create(app,R.raw.ambient_fire);if(fireLoop!=null){fireLoop.setLooping(true);fireLoop.setVolume(.28f,.28f);fireLoop.start();}}
         if(!wantFire)stopFire();
         if(wantForest && forestLoop==null){forestLoop=MediaPlayer.create(app,R.raw.ambient_forest_loop);if(forestLoop!=null){forestLoop.setLooping(true);forestLoop.setVolume(.11f,.11f);forestLoop.start();}}
         if(!wantForest)stopForest();
+        if(wantHeartbeat && heartbeatLoop==null){heartbeatLoop=MediaPlayer.create(app,R.raw.ambient_heartbeat);if(heartbeatLoop!=null){heartbeatLoop.setLooping(true);heartbeatLoop.setVolume(.35f,.35f);heartbeatLoop.start();}}
+        if(!wantHeartbeat)stopHeartbeat();
     }
     private void stopWeatherPlayer(){if(weatherLoop!=null){weatherLoop.release();weatherLoop=null;}}
     private void stopWeather(){stopWeatherPlayer();weatherResource=0;}
     private void stopFire(){if(fireLoop!=null){fireLoop.release();fireLoop=null;}}
     private void stopForest(){if(forestLoop!=null){forestLoop.release();forestLoop=null;}}
+    private void stopHeartbeat(){if(heartbeatLoop!=null){heartbeatLoop.release();heartbeatLoop=null;}}
     private void startGroan(){
         if(groan!=null)return;
         groan=MediaPlayer.create(app,R.raw.fx_low_health);if(groan==null){nextGroan=clock+10000;return;}
@@ -107,7 +111,7 @@ final class GameEffects implements AutoCloseable {
         handler.postDelayed(this,250);
     }};
     private void clearEvents(){handler.removeCallbacksAndMessages(null);for(int stream:streams)pool.stop(stream);streams.clear();next=0;nextHurt=0;if(foreground)handler.post(ambience);}
-    void clear(){clearEvents();stopGroan();stopWeather();stopFire();stopForest();wantFire=false;wantForest=false;ambientHome=false;ambientExploring=false;nextEnvironmental=0;low=false;zombies=false;sceneMuted=false;}
-    void pause(){foreground=false;stopWeatherPlayer();stopFire();stopForest();clearEvents();if(groan!=null && groan.isPlaying())groan.pause();}
-    @Override public void close(){closed=true;foreground=false;clearEvents();stopGroan();stopWeather();stopFire();stopForest();pool.release();}
+    void clear(){clearEvents();stopGroan();stopWeather();stopFire();stopForest();stopHeartbeat();wantFire=false;wantForest=false;wantHeartbeat=false;ambientHome=false;ambientExploring=false;nextEnvironmental=0;low=false;zombies=false;sceneMuted=false;}
+    void pause(){foreground=false;stopWeatherPlayer();stopFire();stopForest();stopHeartbeat();clearEvents();if(groan!=null && groan.isPlaying())groan.pause();}
+    @Override public void close(){closed=true;foreground=false;clearEvents();stopGroan();stopWeather();stopFire();stopForest();stopHeartbeat();pool.release();}
 }

@@ -15,9 +15,7 @@ final class MenuArtwork {
         @Override protected int sizeOf(Integer key,Bitmap image) {return Math.max(1,image.getByteCount()/1024);}
     };
     static int forButton(int id) {
-        if(id==R.id.action_status)return R.drawable.menu_art_character;
         if(id==R.id.action_explore)return R.drawable.menu_art_expedition;
-        if(id==R.id.action_inventory)return R.drawable.menu_art_inventory;
         if(id==R.id.action_shop)return R.drawable.menu_art_shop;
         if(id==R.id.action_heal)return R.drawable.menu_art_healing;
         if(id==R.id.action_equipment)return R.drawable.menu_art_equipment;
@@ -27,9 +25,7 @@ final class MenuArtwork {
         if(id==R.id.action_sleep)return R.drawable.menu_art_sleep;
         if(id==R.id.action_save)return R.drawable.menu_art_save;
         if(id==R.id.action_load)return R.drawable.menu_art_load;
-        if(id==R.id.action_unload)return R.drawable.menu_art_unload;
         if(id==R.id.action_repair)return R.drawable.menu_art_repair;
-        if(id==R.id.action_armor)return R.drawable.menu_art_armor;
         if(id==R.id.action_journal)return R.drawable.menu_art_journal;
         if(id==R.id.action_shelter)return R.drawable.menu_art_shelter;
         if(id==R.id.action_survivors)return R.drawable.menu_art_survivors;
@@ -98,8 +94,8 @@ final class MenuArtwork {
         }
         float density=button.getResources().getDisplayMetrics().density;
         GradientDrawable mask=new GradientDrawable();mask.setColor(Color.WHITE);mask.setCornerRadius(7*density);
-        float focus=resource==R.drawable.menu_art_equipment || resource==R.drawable.menu_art_armor ? .96f
-                :resource==R.drawable.menu_art_character?.86f:resource==R.drawable.menu_art_notes?.82f:.72f;
+        float focus=resource==R.drawable.menu_art_equipment ? .96f
+                :resource==R.drawable.menu_art_notes?.82f:.72f;
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30ffffff),new Picture(image,7*density,focus),mask));
         ViewCompat.setBackgroundTintList(button,null);
         button.setCompoundDrawablesRelative(null,null,null,null);

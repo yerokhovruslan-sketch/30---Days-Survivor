@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private TerminalPuzzleView terminalPuzzle;
     private OpeningView openingView;
     private DifficultySelectionView difficultyView;
+    private BleedingGlow bleedingGlow;
 
     private long dismissedRevision = -1;
     private android.widget.FrameLayout searchOverlay;
@@ -89,6 +90,8 @@ public class MainActivity extends AppCompatActivity {
         installTravelOverlay();
         game.travelScene().observe(this,this::showTravelScene);
         installSearchOverlay();
+        bleedingGlow=new BleedingGlow(this);
+        ((android.widget.FrameLayout)findViewById(R.id.main)).addView(bleedingGlow,new android.widget.FrameLayout.LayoutParams(-1,-1));
         game.searchScene().observe(this, this::showSearchScene);
         ((HomeHud)findViewById(R.id.home_hud)).onClockClick(v->{
             game.pauseWorld(true);
@@ -141,20 +144,18 @@ public class MainActivity extends AppCompatActivity {
             @Override public void click() {game.clickSound();}
             @Override public void unavailable(){game.unavailableSound();}
         }, savedInstanceState);
-        findViewById(R.id.action_status).setVisibility(View.GONE);
-        findViewById(R.id.action_inventory).setVisibility(View.GONE);
-        findViewById(R.id.action_unload).setVisibility(View.GONE);
-        findViewById(R.id.action_armor).setVisibility(View.GONE);
-        int[] actions = {R.id.action_status, R.id.action_explore, R.id.action_inventory,
-                R.id.action_shop, R.id.action_heal, R.id.action_equipment, R.id.action_rest,
-                R.id.action_notes, R.id.action_eat, R.id.action_sleep, R.id.action_save,
-                R.id.action_load, R.id.action_unload, R.id.action_repair, R.id.action_armor,
-                R.id.action_journal, R.id.action_exit, R.id.action_shelter, R.id.action_survivors};
+        int[][] actions = {
+                {R.id.action_explore,2}, {R.id.action_shop,4}, {R.id.action_heal,5},
+                {R.id.action_equipment,6}, {R.id.action_rest,7}, {R.id.action_notes,8},
+                {R.id.action_eat,9}, {R.id.action_sleep,10}, {R.id.action_save,11},
+                {R.id.action_load,12}, {R.id.action_repair,14}, {R.id.action_journal,16},
+                {R.id.action_exit,0}, {R.id.action_shelter,17}, {R.id.action_survivors,18}};
         for (int i = 0; i < actions.length; i++) {
-            final int action = i == 16 ? 0 : i == 17 ? 17 : i == 18 ? 18 : i + 1;
-            Button button = findViewById(actions[i]);
+            final int action = actions[i][1];
+            int buttonId = actions[i][0];
+            Button button = findViewById(buttonId);
             button.setSoundEffectsEnabled(false);
-            MenuArtwork.apply(button, MenuArtwork.forButton(actions[i]));
+            MenuArtwork.apply(button, MenuArtwork.forButton(buttonId));
             android.graphics.ColorMatrix monochrome = new android.graphics.ColorMatrix();
             monochrome.setSaturation(0);
             for (android.graphics.drawable.Drawable icon : button.getCompoundDrawablesRelative()) {
@@ -245,6 +246,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void render(GameSession.Frame current) {
         frame = current;
+        bleedingGlow.showBleeding(current.hasPlayer && current.mode!=GameSession.Mode.ENDED && current.status.bleedingDistress(current.health,current.maxHealth));
         if(current.mode==GameSession.Mode.BUSY){openingView.show(current);return;}
         openingView.show(current);
         boolean difficulty=current.mode==GameSession.Mode.CHOICE && current.menu.title.equals("Уровень сложности");
@@ -292,11 +294,13 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onResume() {
         super.onResume();
         game.resumeMusic();
+        if(bleedingGlow!=null)bleedingGlow.foreground(true);
         if(worldMap!=null)worldMap.foreground(true);
     }
 
     @Override protected void onPause() {
         if(worldMap!=null)worldMap.foreground(false);
+        if(bleedingGlow!=null)bleedingGlow.foreground(false);
         game.pauseMusic();
         super.onPause();
     }
